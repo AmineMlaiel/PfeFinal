@@ -21,6 +21,7 @@ export class SignUpComponent implements OnInit {
     mobileNumber: '',
     password: '',
     confirmPassword: '',
+    role: 'renter', // Default role is renter
   };
 
   loading = false;

@@ -1,21 +1,21 @@
-<div class="bg-gray-100 min-h-screen">
+<div class="min-h-screen bg-gray-100">
   <!-- Header -->
-  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 py-8">
-    <div class="container mx-auto px-4">
+  <div class="py-8 bg-gradient-to-r from-blue-500 to-indigo-600">
+    <div class="container px-4 mx-auto">
       <h1 class="text-3xl font-bold text-white">My Profile</h1>
       <p class="text-white opacity-80">Manage your account information</p>
     </div>
   </div>
 
   <!-- Content Container -->
-  <div class="container mx-auto px-4 py-8">
-    <div class="flex flex-col lg:flex-row gap-8">
+  <div class="container px-4 py-8 mx-auto">
+    <div class="flex flex-col gap-8 lg:flex-row">
       <!-- Left Side: User Info -->
       <div class="lg:w-1/4">
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="p-6 bg-white rounded-lg shadow-md">
           <div class="flex flex-col items-center text-center">
             <div
-              class="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center mb-4"
+              class="flex items-center justify-center w-24 h-24 mb-4 bg-gray-300 rounded-full"
             >
               <span class="text-4xl font-bold text-gray-500"
                 >{{ user?.name?.charAt(0)
@@ -25,11 +25,11 @@
             <h2 class="text-xl font-semibold">
               {{ user?.name }} {{ user?.lastName }}
             </h2>
-            <p class="text-gray-600 mb-4">{{ user?.email }}</p>
+            <p class="mb-4 text-gray-600">{{ user?.email }}</p>
             <div class="w-full">
               <button
                 (click)="logout()"
-                class="w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                class="w-full px-4 py-2 text-white transition bg-red-600 rounded-md hover:bg-red-700"
               >
                 Logout
               </button>
@@ -41,15 +41,15 @@
       <!-- Right Side: Forms -->
       <div class="lg:w-3/4">
         <!-- Profile Information Form -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 class="text-xl font-semibold mb-4">Profile Information</h2>
+        <div class="p-6 mb-6 bg-white rounded-lg shadow-md">
+          <h2 class="mb-4 text-xl font-semibold">Profile Information</h2>
           <form [formGroup]="profileForm" (ngSubmit)="onProfileSubmit()">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
               <!-- First Name -->
               <div>
                 <label
                   for="name"
-                  class="block text-sm font-medium text-gray-700 mb-1"
+                  class="block mb-1 text-sm font-medium text-gray-700"
                   >First Name</label
                 >
                 <input
@@ -63,7 +63,7 @@
                     profileForm.get('name')?.invalid &&
                     profileForm.get('name')?.touched
                   "
-                  class="text-red-500 text-xs mt-1"
+                  class="mt-1 text-xs text-red-500"
                 >
                   First name is required
                 </div>
@@ -73,7 +73,7 @@
               <div>
                 <label
                   for="lastName"
-                  class="block text-sm font-medium text-gray-700 mb-1"
+                  class="block mb-1 text-sm font-medium text-gray-700"
                   >Last Name</label
                 >
                 <input
@@ -87,7 +87,7 @@
                     profileForm.get('lastName')?.invalid &&
                     profileForm.get('lastName')?.touched
                   "
-                  class="text-red-500 text-xs mt-1"
+                  class="mt-1 text-xs text-red-500"
                 >
                   Last name is required
                 </div>
@@ -97,7 +97,7 @@
               <div>
                 <label
                   for="email"
-                  class="block text-sm font-medium text-gray-700 mb-1"
+                  class="block mb-1 text-sm font-medium text-gray-700"
                   >Email</label
                 >
                 <input
@@ -111,7 +111,7 @@
                     profileForm.get('email')?.invalid &&
                     profileForm.get('email')?.touched
                   "
-                  class="text-red-500 text-xs mt-1"
+                  class="mt-1 text-xs text-red-500"
                 >
                   Please enter a valid email
                 </div>
@@ -121,7 +121,7 @@
               <div>
                 <label
                   for="mobileNumber"
-                  class="block text-sm font-medium text-gray-700 mb-1"
+                  class="block mb-1 text-sm font-medium text-gray-700"
                   >Mobile Number</label
                 >
                 <input
@@ -135,7 +135,7 @@
                     profileForm.get('mobileNumber')?.invalid &&
                     profileForm.get('mobileNumber')?.touched
                   "
-                  class="text-red-500 text-xs mt-1"
+                  class="mt-1 text-xs text-red-500"
                 >
                   Mobile number is required
                 </div>
@@ -147,11 +147,11 @@
               <button
                 type="submit"
                 [disabled]="profileForm.invalid || loading"
-                class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center"
+                class="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span
                   *ngIf="loading"
-                  class="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-white rounded-full"
+                  class="inline-block w-4 h-4 mr-2 border-t-2 border-white rounded-full animate-spin"
                 ></span>
                 Save Changes
               </button>
@@ -160,14 +160,14 @@
         </div>
 
         <!-- Change Password Form -->
-        <div class="bg-white rounded-lg shadow-md p-6">
-          <h2 class="text-xl font-semibold mb-4">Change Password</h2>
+        <div class="p-6 bg-white rounded-lg shadow-md">
+          <h2 class="mb-4 text-xl font-semibold">Change Password</h2>
           <form [formGroup]="passwordForm" (ngSubmit)="onPasswordSubmit()">
             <!-- Current Password -->
             <div class="mb-4">
               <label
                 for="currentPassword"
-                class="block text-sm font-medium text-gray-700 mb-1"
+                class="block mb-1 text-sm font-medium text-gray-700"
                 >Current Password</label
               >
               <input
@@ -181,7 +181,7 @@
                   passwordForm.get('currentPassword')?.invalid &&
                   passwordForm.get('currentPassword')?.touched
                 "
-                class="text-red-500 text-xs mt-1"
+                class="mt-1 text-xs text-red-500"
               >
                 Current password is required
               </div>
@@ -191,7 +191,7 @@
             <div class="mb-4">
               <label
                 for="newPassword"
-                class="block text-sm font-medium text-gray-700 mb-1"
+                class="block mb-1 text-sm font-medium text-gray-700"
                 >New Password</label
               >
               <input
@@ -205,7 +205,7 @@
                   passwordForm.get('newPassword')?.invalid &&
                   passwordForm.get('newPassword')?.touched
                 "
-                class="text-red-500 text-xs mt-1"
+                class="mt-1 text-xs text-red-500"
               >
                 Password must be at least 6 characters
               </div>
@@ -215,7 +215,7 @@
             <div class="mb-4">
               <label
                 for="confirmPassword"
-                class="block text-sm font-medium text-gray-700 mb-1"
+                class="block mb-1 text-sm font-medium text-gray-700"
                 >Confirm New Password</label
               >
               <input
@@ -226,7 +226,7 @@
               />
               <div
                 *ngIf="passwordForm.hasError('passwordMismatch')"
-                class="text-red-500 text-xs mt-1"
+                class="mt-1 text-xs text-red-500"
               >
                 Passwords do not match
               </div>
@@ -237,16 +237,39 @@
               <button
                 type="submit"
                 [disabled]="passwordForm.invalid || passwordLoading"
-                class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center"
+                class="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span
                   *ngIf="passwordLoading"
-                  class="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-white rounded-full"
+                  class="inline-block w-4 h-4 mr-2 border-t-2 border-white rounded-full animate-spin"
                 ></span>
                 Update Password
               </button>
             </div>
           </form>
+        </div>
+
+        <!-- Account Upgrade Section (visible only for renters) -->
+        <div
+          *ngIf="user?.role === 'renter'"
+          class="p-6 mt-6 bg-white rounded-lg shadow-md"
+        >
+          <h2 class="mb-4 text-xl font-semibold">Become a Property Owner</h2>
+          <p class="mb-4 text-gray-600">
+            Upgrade your account to list and manage your own properties on our
+            platform.
+          </p>
+          <button
+            (click)="upgradeToOwner()"
+            [disabled]="upgradeLoading"
+            class="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span
+              *ngIf="upgradeLoading"
+              class="inline-block w-4 h-4 mr-2 border-t-2 border-white rounded-full animate-spin"
+            ></span>
+            Upgrade to Owner
+          </button>
         </div>
       </div>
     </div>

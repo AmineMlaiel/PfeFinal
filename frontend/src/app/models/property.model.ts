@@ -28,10 +28,17 @@ export interface Property {
   rating?: number;
   reviewCount?: number;
   isBookmarked?: boolean;
+  isApproved?: boolean;
+  isActive?: boolean;
+  status?: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
   host?: {
     _id: string;
     name?: string;
     email?: string;
     avatar?: string;
   };
+  cleaningFee?: number;
+  additionalGuestFee?: number;
+  baseGuests?: number;
 }

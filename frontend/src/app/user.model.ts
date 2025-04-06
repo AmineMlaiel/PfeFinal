@@ -6,6 +6,6 @@ export interface User {
   password: string;
   confirmPassword?: string;
   isVerified?: boolean;
-  role?: string;
+  role?: 'renter' | 'owner' | 'admin';
   id?: string;
 }

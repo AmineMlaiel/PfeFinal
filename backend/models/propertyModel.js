@@ -150,6 +150,31 @@ const propertySchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+    },
+    // Booking related fields
+    cleaningFee: {
+      type: Number,
+      default: 50, // Default $50 cleaning fee
+      min: 0,
+    },
+    additionalGuestFee: {
+      type: Number,
+      default: 25, // Default $25 per additional guest per night
+      min: 0,
+    },
+    baseGuests: {
+      type: Number,
+      default: 2, // Default base capacity is 2 guests
+      min: 1,
+    },
   },
   {
     timestamps: true,

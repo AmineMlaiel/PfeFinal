@@ -1,0 +1,198 @@
+<div class="property-approval-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1>Property Approval</h1>
+      <p>Review and manage property listings submitted by owners</p>
+    </div>
+  </header>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    <button
+      [class.active]="activeFilter === 'pending'"
+      (click)="applyFilter('pending')"
+    >
+      Pending Approval ({{ getPendingCount() }})
+    </button>
+    <button
+      [class.active]="activeFilter === 'approved'"
+      (click)="applyFilter('approved')"
+    >
+      Approved ({{ getApprovedCount() }})
+    </button>
+    <button
+      [class.active]="activeFilter === 'rejected'"
+      (click)="applyFilter('rejected')"
+    >
+      Rejected ({{ getRejectedCount() }})
+    </button>
+    <button
+      [class.active]="activeFilter === 'all'"
+      (click)="applyFilter('all')"
+    >
+      All Properties ({{ properties.length }})
+    </button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading properties...</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error && !loading" class="error-container">
+    <div class="error-message">
+      <i class="fa fa-exclamation-circle"></i>
+      <p>{{ error }}</p>
+    </div>
+    <button (click)="loadProperties()" class="btn-retry">Try Again</button>
+  </div>
+
+  <!-- Empty state -->
+  <div
+    *ngIf="!loading && !error && filteredProperties.length === 0"
+    class="empty-container"
+  >
+    <div class="empty-state">
+      <i class="fa fa-home"></i>
+      <h2>No Properties Found</h2>
+      <p *ngIf="activeFilter === 'pending'">
+        There are no properties pending approval at this time.
+      </p>
+      <p *ngIf="activeFilter === 'approved'">
+        There are no approved properties to display.
+      </p>
+      <p *ngIf="activeFilter === 'all'">
+        There are no properties in the system.
+      </p>
+    </div>
+  </div>
+
+  <!-- Property listings -->
+  <div
+    *ngIf="!loading && !error && filteredProperties.length > 0"
+    class="properties-list"
+  >
+    <div class="property-card" *ngFor="let property of filteredProperties">
+      <div class="property-image">
+        <img
+          [src]="
+            property.images && property.images.length > 0
+              ? property.images[0]
+              : 'assets/images/property-placeholder.jpg'
+          "
+          [alt]="property.title"
+          class="main-image"
+        />
+        <div class="status-badge" [ngClass]="getStatusBadgeClass(property)">
+          {{ getStatusText(property) }}
+        </div>
+      </div>
+      <div class="property-info">
+        <h3 class="property-title">{{ property.title }}</h3>
+        <p class="property-address">
+          <i class="fa fa-map-marker-alt"></i>
+          {{ property.address.city }}, {{ property.address.state }}
+        </p>
+        <div class="property-details">
+          <span>
+            <i class="fa fa-money-bill"></i>
+            {{ property.price | currency }}
+          </span>
+          <span><i class="fa fa-bed"></i> {{ property.bedrooms }} bed</span>
+          <span><i class="fa fa-bath"></i> {{ property.bathrooms }} bath</span>
+          <span>
+            <i class="fa fa-ruler-combined"></i> {{ property.area }} m²
+          </span>
+        </div>
+
+        <div class="rejection-info" *ngIf="property.status === 'rejected'">
+          <h4 class="rejection-title">Rejection Reason:</h4>
+          <p class="rejection-reason">{{ property.rejectionReason }}</p>
+        </div>
+
+        <div class="owner-info" *ngIf="property.host">
+          <p>
+            <strong>Owner:</strong>
+            {{ property.host.name || "Unknown" }} ({{
+              property.host.email || "No email"
+            }})
+          </p>
+        </div>
+      </div>
+      <div class="property-actions">
+        <a
+          [routerLink]="['/properties', property._id]"
+          class="btn-view"
+          target="_blank"
+        >
+          <i class="fa fa-eye"></i> View Details
+        </a>
+
+        <!-- Action buttons for pending properties -->
+        <div *ngIf="!property.isApproved" class="approval-actions">
+          <button
+            (click)="approveProperty(property._id || '')"
+            class="btn-approve"
+          >
+            <i class="fa fa-check"></i> Approve
+          </button>
+          <button
+            (click)="rejectProperty(property._id || '')"
+            class="btn-reject"
+          >
+            <i class="fa fa-times"></i> Decline
+          </button>
+        </div>
+
+        <!-- Show unreject button for approved properties -->
+        <button
+          *ngIf="property.isApproved"
+          (click)="rejectProperty(property._id || '')"
+          class="btn-reject"
+        >
+          <i class="fa fa-ban"></i> Revoke Approval
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rejection modal -->
+<div *ngIf="showRejectionModal" class="rejection-modal-overlay">
+  <div class="rejection-modal">
+    <div class="modal-header">
+      <h3>Reject Property</h3>
+      <button class="close-btn" (click)="closeRejectionModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p class="modal-instruction">
+        Please provide a reason for rejecting this property:
+      </p>
+      <div class="form-group">
+        <label for="rejectionReason">Rejection Reason:</label>
+        <textarea
+          id="rejectionReason"
+          [(ngModel)]="rejectionReason"
+          rows="4"
+          placeholder="Enter details explaining why this property is being rejected..."
+          class="rejection-input"
+        ></textarea>
+      </div>
+      <div class="property-preview" *ngIf="propertyToReject">
+        <h4>{{ propertyToReject.title }}</h4>
+        <p>
+          <strong>Address:</strong> {{ propertyToReject.address.city }},
+          {{ propertyToReject.address.state }}
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" (click)="closeRejectionModal()">Cancel</button>
+      <button class="btn-submit" (click)="submitRejection()">
+        Reject Property
+      </button>
+    </div>
+  </div>
+</div>

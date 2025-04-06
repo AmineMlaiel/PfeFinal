@@ -40,8 +40,8 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
-      default: "user",
+      enum: ["renter", "owner", "admin"],
+      default: "renter",
     },
     verificationToken: String,
     verificationExpires: Date,

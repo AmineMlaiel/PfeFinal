@@ -2,100 +2,97 @@ const mongoose = require("mongoose");
 
 const bookingSchema = new mongoose.Schema(
   {
-    property: {
+    propertyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Property",
       required: [true, "Property is required"],
     },
-    tenant: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: [true, "Tenant is required"],
+      required: [true, "User is required"],
     },
-    startDate: {
+    checkIn: {
       type: Date,
-      required: [true, "Start date is required"],
+      required: [true, "Check-in date is required"],
     },
-    endDate: {
+    checkOut: {
       type: Date,
-      required: [true, "End date is required"],
-    },
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected", "cancelled", "completed"],
-      default: "pending",
+      required: [true, "Check-out date is required"],
     },
     totalPrice: {
       type: Number,
       required: [true, "Total price is required"],
+    },
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "cancelled", "completed"],
+      default: "pending",
+    },
+    guests: {
+      adults: {
+        type: Number,
+        required: [true, "Number of adults is required"],
+        min: 1,
+      },
+      children: {
+        type: Number,
+        default: 0,
+      },
+    },
+    contactInfo: {
+      name: {
+        type: String,
+        required: [true, "Contact name is required"],
+      },
+      email: {
+        type: String,
+        required: [true, "Contact email is required"],
+      },
+      phone: {
+        type: String,
+        required: [true, "Contact phone is required"],
+      },
+    },
+    specialRequests: {
+      type: String,
+      trim: true,
     },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "partial", "refunded", "failed"],
       default: "pending",
     },
-    paymentDetails: {
-      transactionId: String,
-      paymentMethod: String,
-      paymentDate: Date,
+    // Reference to property for population
+    property: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Property",
     },
-    additionalRequests: {
-      type: String,
-      trim: true,
-    },
-    documents: [
-      {
-        type: String, // Document URLs
-      },
-    ],
-    reviewSubmitted: {
-      type: Boolean,
-      default: false,
-    },
-    // Admin or landlord notes (not visible to tenant)
-    privateNotes: {
-      type: String,
-      trim: true,
-    },
-    // Message history related to this booking
-    messages: [
-      {
-        sender: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true,
-        },
-        message: {
-          type: String,
-          required: true,
-        },
-        timestamp: {
-          type: Date,
-          default: Date.now,
-        },
-        isRead: {
-          type: Boolean,
-          default: false,
-        },
-      },
-    ],
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Check if end date is after start date
+// Check if check-out date is after check-in date
 bookingSchema.pre("save", function (next) {
-  if (this.endDate < this.startDate) {
-    return next(new Error("End date must be after start date"));
+  if (this.checkOut < this.checkIn) {
+    return next(new Error("Check-out date must be after check-in date"));
   }
+
+  // Set property field as well when propertyId is provided
+  if (this.propertyId && !this.property) {
+    this.property = this.propertyId;
+  }
+
   next();
 });
 
-// Add index for fast lookups by tenant and property
-bookingSchema.index({ tenant: 1, property: 1 });
-bookingSchema.index({ property: 1, startDate: 1, endDate: 1 });
+// Add index for fast lookups by userId and propertyId
+bookingSchema.index({ userId: 1, propertyId: 1 });
+bookingSchema.index({ propertyId: 1, checkIn: 1, checkOut: 1 });
 bookingSchema.index({ status: 1 });
 
 const Booking = mongoose.model("Booking", bookingSchema);

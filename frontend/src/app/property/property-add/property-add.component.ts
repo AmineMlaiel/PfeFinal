@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -42,7 +42,7 @@ const PROPERTY_TYPES = [
   templateUrl: './property-add.component.html',
   styleUrl: './property-add.component.scss',
 })
-export class PropertyAddComponent implements OnInit {
+export class PropertyAddComponent implements OnInit, AfterViewInit, OnDestroy {
   loading = false;
   error = '';
   success = false;
@@ -50,6 +50,12 @@ export class PropertyAddComponent implements OnInit {
 
   propertyTypes = PROPERTY_TYPES;
   availableFeatures = PROPERTY_FEATURES;
+
+  // For map selection
+  latitude: number | null = null;
+  longitude: number | null = null;
+  private map: any = null;
+  private marker: any = null;
 
   // Property model
   property = {
@@ -98,6 +104,147 @@ export class PropertyAddComponent implements OnInit {
         });
       }
     });
+  }
+
+  ngAfterViewInit(): void {
+    // Initialize map after view is loaded
+    setTimeout(() => this.initMap(), 300);
+  }
+
+  ngOnDestroy(): void {
+    // Clean up map resources
+    if (this.map) {
+      if (typeof this.map.remove === 'function') {
+        this.map.remove();
+      } else if (this.marker) {
+        // Google Maps doesn't have a remove method, need to handle differently
+        this.marker.setMap(null);
+      }
+      this.map = null;
+      this.marker = null;
+    }
+  }
+
+  // Initialize the Google Map for location selection
+  private initMap(): void {
+    // Make sure Google Maps API is loaded
+    if (!window.google || !window.google.maps) {
+      console.error('Google Maps API not loaded');
+      return;
+    }
+
+    // Get the map container
+    const mapElement = document.getElementById('location-select-map');
+    if (!mapElement) {
+      console.error('Map container not found');
+      return;
+    }
+
+    // Try to get initial coordinates based on the address entered so far
+    let initialLat = 34.415248154118444; // Default to New York
+    let initialLng = 8.803669105208915;
+
+    // Set up the map
+    this.map = new google.maps.Map(mapElement, {
+      center: { lat: initialLat, lng: initialLng },
+      zoom: 10,
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+    });
+
+    // Add click listener to the map
+    this.map.addListener('click', (event: any) => {
+      const clickedLat = event.latLng.lat();
+      const clickedLng = event.latLng.lng();
+      this.setMapMarker(clickedLat, clickedLng);
+    });
+
+    // Trigger geocoding when address fields change
+    document
+      .getElementById('street')
+      ?.addEventListener('blur', () => this.geocodeAddress());
+    document
+      .getElementById('city')
+      ?.addEventListener('blur', () => this.geocodeAddress());
+    document
+      .getElementById('country')
+      ?.addEventListener('blur', () => this.geocodeAddress());
+  }
+
+  // Attempt to geocode the entered address and update the map
+  private geocodeAddress(): void {
+    // Only proceed if we have sufficient address info
+    if (!this.property.address.street || !this.property.address.city) {
+      return;
+    }
+
+    if (!window.google || !window.google.maps) return;
+
+    const geocoder = new google.maps.Geocoder();
+    const address = `${this.property.address.street}, ${
+      this.property.address.city
+    }, ${this.property.address.state || ''}, ${
+      this.property.address.country || ''
+    }`;
+
+    geocoder.geocode({ address }, (results: any, status: any) => {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location;
+
+        // Update the map view
+        this.map.setCenter(location);
+        this.map.setZoom(15);
+
+        // Set the marker at this location
+        const lat = location.lat();
+        const lng = location.lng();
+        this.setMapMarker(lat, lng);
+      }
+    });
+  }
+
+  // Set or update the marker on the map
+  private setMapMarker(lat: number, lng: number): void {
+    // Update our form values
+    this.latitude = lat;
+    this.longitude = lng;
+
+    // Update property coordinates (MongoDB format is [longitude, latitude])
+    this.property.location.coordinates = [lng, lat];
+
+    // Remove existing marker if any
+    if (this.marker) {
+      this.marker.setMap(null);
+    }
+
+    // Create a new marker
+    this.marker = new google.maps.Marker({
+      position: { lat, lng },
+      map: this.map,
+      draggable: true, // Allow users to fine-tune the position
+      animation: google.maps.Animation.DROP,
+    });
+
+    // Add drag end listener to update coordinates when marker is moved
+    this.marker.addListener('dragend', () => {
+      const position = this.marker.getPosition();
+      if (position) {
+        this.latitude = position.lat();
+        this.longitude = position.lng();
+        // Use non-null assertion since we know these values exist at this point
+        this.property.location.coordinates = [this.longitude!, this.latitude!];
+      }
+    });
+
+    console.log('Selected coordinates:', [lng, lat]);
+  }
+
+  updateCoordinates(): void {
+    if (this.longitude !== null && this.latitude !== null) {
+      this.property.location.coordinates = [this.longitude, this.latitude];
+      console.log('Coordinates updated:', this.property.location.coordinates);
+    }
   }
 
   formatDate(date: Date): string {
@@ -231,108 +378,71 @@ export class PropertyAddComponent implements OnInit {
       return;
     }
 
-    // Get coordinates from address
-    this.getCoordinatesFromAddress()
-      .then(() => {
-        // First create the property
-        this.propertyService.createProperty(this.property).subscribe({
-          next: (propertyResponse) => {
-            const propertyId = propertyResponse.data._id;
-
-            // Then upload images if there are any
-            if (this.imageFiles.length > 0) {
-              // Create FormData for image upload
-              const formData = new FormData();
-
-              // Backend expects "images" as the field name for file uploads
-              // If multiple files, append each one with the same field name
-              this.imageFiles.forEach((file) => {
-                formData.append('images', file);
-              });
-
-              // Upload images
-              this.propertyService
-                .uploadPropertyImages(propertyId, formData)
-                .subscribe({
-                  next: (imageResponse) => {
-                    this.success = true;
-                    this.loading = false;
-
-                    // Redirect to property details after a short delay
-                    setTimeout(() => {
-                      this.router.navigate(['/properties', propertyId]);
-                    }, 1500);
-                  },
-                  error: (err) => {
-                    console.error('Error uploading images:', err);
-                    this.error =
-                      'Property created but failed to upload images. You can add images later.';
-                    this.loading = false;
-                    this.success = true; // Still consider it a success
-
-                    // Redirect to property details after a short delay
-                    setTimeout(() => {
-                      this.router.navigate(['/properties', propertyId]);
-                    }, 2000);
-                  },
-                });
-            } else {
-              this.success = true;
-              this.loading = false;
-
-              // Redirect to property details after a short delay
-              setTimeout(() => {
-                this.router.navigate(['/properties', propertyId]);
-              }, 1500);
-            }
-          },
-          error: (err) => {
-            console.error('Error creating property:', err);
-            this.error = 'Failed to create property. Please try again.';
-            this.loading = false;
-          },
-        });
-      })
-      .catch((error) => {
-        console.error('Error geocoding address:', error);
-        this.error =
-          'Failed to geocode address. Please verify your address is correct.';
-        this.loading = false;
-      });
-  }
-
-  // Get coordinates from address using Nominatim API (OpenStreetMap)
-  async getCoordinatesFromAddress(): Promise<void> {
-    const { street, city, state, zipCode, country } = this.property.address;
-    const addressString = `${street}, ${city}, ${state}, ${zipCode}, ${country}`;
-
-    try {
-      // Encode the address for URL
-      const encodedAddress = encodeURIComponent(addressString);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`
+    // Use manually entered coordinates if available, otherwise skip geocoding
+    if (this.latitude === null || this.longitude === null) {
+      console.log(
+        'Using default coordinates [0, 0] as no manual coordinates were provided'
       );
-
-      if (!response.ok) {
-        throw new Error('Failed to geocode address');
-      }
-
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-        // Nominatim returns [lat, lon] but MongoDB expects [lon, lat]
-        this.property.location.coordinates = [
-          parseFloat(data[0].lon),
-          parseFloat(data[0].lat),
-        ];
-      } else {
-        // If no results found, use default coordinates
-        this.property.location.coordinates = [0, 0];
-      }
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      // If error, use default coordinates
-      this.property.location.coordinates = [0, 0];
+    } else {
+      // Update coordinates one more time before submission
+      this.updateCoordinates();
     }
+
+    // Create the property with the current coordinates
+    this.propertyService.createProperty(this.property).subscribe({
+      next: (propertyResponse) => {
+        const propertyId = propertyResponse.data._id;
+
+        // Then upload images if there are any
+        if (this.imageFiles.length > 0) {
+          // Create FormData for image upload
+          const formData = new FormData();
+
+          // Backend expects "images" as the field name for file uploads
+          // If multiple files, append each one with the same field name
+          this.imageFiles.forEach((file) => {
+            formData.append('images', file);
+          });
+
+          // Upload images
+          this.propertyService
+            .uploadPropertyImages(propertyId, formData)
+            .subscribe({
+              next: (imageResponse) => {
+                this.success = true;
+                this.loading = false;
+
+                // Redirect to property details after a short delay
+                setTimeout(() => {
+                  this.router.navigate(['/properties', propertyId]);
+                }, 1500);
+              },
+              error: (err) => {
+                console.error('Error uploading images:', err);
+                this.error =
+                  'Property created but failed to upload images. You can add images later.';
+                this.loading = false;
+                this.success = true;
+
+                setTimeout(() => {
+                  this.router.navigate(['/properties', propertyId]);
+                }, 2000);
+              },
+            });
+        } else {
+          this.success = true;
+          this.loading = false;
+
+          setTimeout(() => {
+            this.router.navigate(['/properties', propertyId]);
+          }, 1500);
+        }
+      },
+      error: (err) => {
+        console.error('Error creating property:', err);
+        this.error = 'Failed to create property. Please try again.';
+        this.loading = false;
+      },
+    });
   }
 }

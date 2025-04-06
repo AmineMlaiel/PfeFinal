@@ -32,29 +32,39 @@ exports.createProperty = async (req, res) => {
 // @access  Public
 exports.getProperties = async (req, res) => {
   try {
-    // Copy request query
+    // Copy req.query to avoid modifying original
     const reqQuery = { ...req.query };
 
-    // Fields to exclude from filtering
-    const removeFields = ["select", "sort", "page", "limit", "search"];
+    // Fields to exclude from filter
+    const removeFields = ["select", "sort", "page", "limit"];
+
+    // Loop over removeFields and delete them from reqQuery
     removeFields.forEach((param) => delete reqQuery[param]);
 
-    // Create query string and replace operators
+    // Create our query string
     let queryStr = JSON.stringify(reqQuery);
+
+    // Create operators ($gt, $gte, etc)
     queryStr = queryStr.replace(
       /\b(gt|gte|lt|lte|in)\b/g,
       (match) => `$${match}`
     );
 
-    // Basic query
-    let query = Property.find(JSON.parse(queryStr));
+    // Parse the query string back to an object
+    let parsedQuery = JSON.parse(queryStr);
 
-    // Handle search
-    if (req.query.search) {
-      query = Property.find({
-        $text: { $search: req.query.search },
-      });
+    // If not explicitly requesting all properties (admin function), only show approved ones
+    if (req.user && req.user.role === "admin") {
+      // Admin can see all properties, regardless of approval status
+      console.log("Admin user is viewing properties - showing all properties");
+    } else if (parsedQuery.isApproved === undefined) {
+      // Regular users only see approved properties by default
+      parsedQuery.isApproved = true;
+      console.log("Regular user view - filtering to only approved properties");
     }
+
+    // Finding properties based on query
+    let query = Property.find(parsedQuery);
 
     // Select specific fields
     if (req.query.select) {
@@ -62,12 +72,12 @@ exports.getProperties = async (req, res) => {
       query = query.select(fields);
     }
 
-    // Sort
+    // Sort by fields
     if (req.query.sort) {
       const sortBy = req.query.sort.split(",").join(" ");
       query = query.sort(sortBy);
     } else {
-      query = query.sort("-createdAt");
+      query = query.sort("-createdAt"); // Default sort by newest first
     }
 
     // Pagination
@@ -75,14 +85,11 @@ exports.getProperties = async (req, res) => {
     const limit = parseInt(req.query.limit, 10) || 10;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const total = await Property.countDocuments(JSON.parse(queryStr));
+    const total = await Property.countDocuments(parsedQuery);
 
     query = query.skip(startIndex).limit(limit);
 
-    // Add owner data
-    query = query.populate("owner", "name email");
-
-    // Execute query
+    // Execute the query
     const properties = await query;
 
     // Pagination result
@@ -387,7 +394,7 @@ exports.uploadPropertyImages = async (req, res) => {
 // @access  Private (Admin only)
 exports.approveProperty = async (req, res) => {
   try {
-    const { approved } = req.body;
+    const { approved, rejectionReason } = req.body;
 
     if (typeof approved !== "boolean") {
       return res.status(400).json({
@@ -396,9 +403,20 @@ exports.approveProperty = async (req, res) => {
       });
     }
 
+    // Prepare update data
+    const updateData = {
+      isApproved: approved,
+      status: approved ? "approved" : "rejected",
+    };
+
+    // If rejecting, add rejection reason
+    if (!approved && rejectionReason) {
+      updateData.rejectionReason = rejectionReason;
+    }
+
     const property = await Property.findByIdAndUpdate(
       req.params.id,
-      { isApproved: approved },
+      updateData,
       { new: true }
     );
 
@@ -451,6 +469,44 @@ exports.getNearbyProperties = async (req, res) => {
       data: properties,
     });
   } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Check if current user is the owner of a property
+// @route   GET /api/properties/:id/check-ownership
+// @access  Private
+exports.checkPropertyOwnership = async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
+    }
+
+    console.log("Checking property ownership:");
+    console.log("Property owner:", property.owner);
+    console.log("Current user:", req.user._id);
+    console.log(
+      "String comparison:",
+      property.owner.toString() === req.user._id.toString()
+    );
+
+    // Check if current user is the owner
+    const isOwner = property.owner.toString() === req.user._id.toString();
+
+    res.status(200).json({
+      success: true,
+      isOwner,
+    });
+  } catch (error) {
+    console.error("Error checking property ownership:", error);
     res.status(400).json({
       success: false,
       message: error.message,

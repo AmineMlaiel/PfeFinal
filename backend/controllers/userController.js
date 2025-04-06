@@ -10,7 +10,7 @@ const { badRequest, notFound, serverError } = require("../utils/errorHandler");
 
 // Controller function to handle user registration
 exports.registerUser = async (req, res) => {
-  const { name, lastName, email, password, mobileNumber } = req.body;
+  const { name, lastName, email, password, mobileNumber, role } = req.body;
 
   try {
     // Check if user already exists
@@ -31,6 +31,8 @@ exports.registerUser = async (req, res) => {
       mobileNumber,
       // For testing purposes, you can set this to true to skip email verification
       isVerified: true, // TEMPORARILY set to true for testing
+      // Only allow setting role to renter or owner during registration
+      role: role === "owner" ? "owner" : "renter",
     });
 
     // Save the user to the database
@@ -518,6 +520,55 @@ exports.validateUser = async (req, res) => {
       success: false,
       message: "Error validating user",
       error: err.message,
+    });
+  }
+};
+
+// Upgrade a user from renter to owner
+exports.upgradeToOwner = async (req, res) => {
+  try {
+    // Can only upgrade own account (unless admin)
+    const userId = req.params.id || req.user.id;
+
+    // If not self and not admin, deny
+    if (userId !== req.user.id && req.user.role !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to upgrade this account",
+      });
+    }
+
+    // Find the user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    // Check if already an owner or admin
+    if (user.role === "owner" || user.role === "admin") {
+      return res.status(400).json({
+        success: false,
+        message: "User already has owner privileges",
+      });
+    }
+
+    // Upgrade to owner
+    user.role = "owner";
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Account upgraded to owner successfully",
+    });
+  } catch (error) {
+    console.error("Error upgrading account:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error upgrading account",
+      error: error.message,
     });
   }
 };

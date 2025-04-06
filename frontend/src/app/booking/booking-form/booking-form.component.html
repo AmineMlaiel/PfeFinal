@@ -1,0 +1,312 @@
+<div class="booking-form-container">
+  <div class="booking-form-header">
+    <h3>Book This Property</h3>
+    <div class="price-info">
+      <span class="price">{{ property.price | currency }} </span>
+      <span class="per-night">/ night</span>
+    </div>
+  </div>
+
+  <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()" class="booking-form">
+    <!-- Date Selection -->
+    <div class="date-selection">
+      <div class="form-group">
+        <label for="checkIn"><i class="fa fa-calendar"></i> Check-in</label>
+        <input
+          type="date"
+          id="checkIn"
+          formControlName="checkIn"
+          [min]="today"
+          [class.is-invalid]="
+            bookingForm.get('checkIn')?.invalid &&
+            bookingForm.get('checkIn')?.touched
+          "
+        />
+
+        <div
+          class="validation-error"
+          *ngIf="
+            bookingForm.get('checkIn')?.invalid &&
+            bookingForm.get('checkIn')?.touched
+          "
+        >
+          Please select a check-in date
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="checkOut"> <i class="fa fa-calendar"></i> Check-out </label>
+        <input
+          type="date"
+          id="checkOut"
+          formControlName="checkOut"
+          [min]="getTomorrow(bookingForm.get('checkIn')?.value)"
+          [class.is-invalid]="
+            bookingForm.get('checkOut')?.invalid &&
+            bookingForm.get('checkOut')?.touched
+          "
+        />
+        <div
+          class="validation-error"
+          *ngIf="
+            bookingForm.get('checkOut')?.invalid &&
+            bookingForm.get('checkOut')?.touched
+          "
+        >
+          Please select a check-out date
+        </div>
+      </div>
+    </div>
+
+    <!-- Guest Selection -->
+    <div formGroupName="guests" class="guest-selection">
+      <div class="form-group">
+        <label for="adults">Adults</label>
+        <div class="number-input">
+          <button
+            type="button"
+            (click)="
+              bookingForm
+                .get('guests.adults')
+                ?.setValue(
+                  Math.max(
+                    1,
+                    (bookingForm.get('guests.adults')?.value || 1) - 1
+                  )
+                )
+            "
+            [disabled]="bookingForm.get('guests.adults')?.value <= 1"
+          >
+            <i class="fa fa-minus"></i>
+          </button>
+          <input
+            type="number"
+            id="adults"
+            formControlName="adults"
+            min="1"
+            max="10"
+          />
+          <button
+            type="button"
+            (click)="
+              bookingForm
+                .get('guests.adults')
+                ?.setValue(
+                  Math.min(
+                    10,
+                    (bookingForm.get('guests.adults')?.value || 1) + 1
+                  )
+                )
+            "
+            [disabled]="bookingForm.get('guests.adults')?.value >= 10"
+          >
+            <i class="fa fa-plus"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="children">Children</label>
+        <div class="number-input">
+          <button
+            type="button"
+            (click)="
+              bookingForm
+                .get('guests.children')
+                ?.setValue(
+                  Math.max(
+                    0,
+                    (bookingForm.get('guests.children')?.value || 0) - 1
+                  )
+                )
+            "
+            [disabled]="bookingForm.get('guests.children')?.value <= 0"
+          >
+            <i class="fa fa-minus"></i>
+          </button>
+          <input
+            type="number"
+            id="children"
+            formControlName="children"
+            min="0"
+            max="6"
+          />
+          <button
+            type="button"
+            (click)="
+              bookingForm
+                .get('guests.children')
+                ?.setValue(
+                  Math.min(
+                    6,
+                    (bookingForm.get('guests.children')?.value || 0) + 1
+                  )
+                )
+            "
+            [disabled]="bookingForm.get('guests.children')?.value >= 6"
+          >
+            <i class="fa fa-plus"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div formGroupName="contactInfo" class="contact-info">
+      <h4>Contact Information</h4>
+
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input
+          type="text"
+          id="name"
+          formControlName="name"
+          placeholder="Enter your full name"
+          [class.is-invalid]="
+            bookingForm.get('contactInfo.name')?.invalid &&
+            bookingForm.get('contactInfo.name')?.touched
+          "
+        />
+        <div
+          class="validation-error"
+          *ngIf="
+            bookingForm.get('contactInfo.name')?.invalid &&
+            bookingForm.get('contactInfo.name')?.touched
+          "
+        >
+          Please enter your name
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          formControlName="email"
+          placeholder="Enter your email address"
+          [class.is-invalid]="
+            bookingForm.get('contactInfo.email')?.invalid &&
+            bookingForm.get('contactInfo.email')?.touched
+          "
+        />
+        <div
+          class="validation-error"
+          *ngIf="
+            bookingForm.get('contactInfo.email')?.invalid &&
+            bookingForm.get('contactInfo.email')?.touched
+          "
+        >
+          Please enter a valid email address
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <input
+          type="tel"
+          id="phone"
+          formControlName="phone"
+          placeholder="Enter your phone number"
+          [class.is-invalid]="
+            bookingForm.get('contactInfo.phone')?.invalid &&
+            bookingForm.get('contactInfo.phone')?.touched
+          "
+        />
+        <div
+          class="validation-error"
+          *ngIf="
+            bookingForm.get('contactInfo.phone')?.invalid &&
+            bookingForm.get('contactInfo.phone')?.touched
+          "
+        >
+          Please enter your phone number
+        </div>
+      </div>
+    </div>
+
+    <!-- Special Requests -->
+    <div class="form-group">
+      <label for="specialRequests">Special Requests (optional)</label>
+      <textarea
+        id="specialRequests"
+        formControlName="specialRequests"
+        placeholder="Any special requirements for your stay..."
+        rows="3"
+      ></textarea>
+    </div>
+
+    <!-- Pricing Summary -->
+    <div class="pricing-summary">
+      <h4>Price Details</h4>
+
+      <div *ngIf="isCalculating" class="loading-price">
+        <div class="spinner-sm"></div>
+        <p>Calculating price...</p>
+      </div>
+
+      <div *ngIf="!isCalculating && totalPrice > 0" class="price-breakdown">
+        <div class="price-item">
+          <span>{{ property.price | currency }} x {{ nights }} nights</span>
+          <span>{{ property.price * nights | currency }}</span>
+        </div>
+
+        <div class="price-item" *ngIf="property.cleaningFee">
+          <span>Cleaning fee</span>
+          <span>{{ property.cleaningFee | currency }}</span>
+        </div>
+
+        <div class="price-item">
+          <span>Service fee</span>
+          <span>{{ property.price * nights * 0.1 | currency }}</span>
+        </div>
+
+        <div class="price-divider"></div>
+
+        <div class="price-total">
+          <span>Total</span>
+          <span>{{ totalPrice | currency }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Availability Warning -->
+    <div class="availability-warning" *ngIf="!isAvailable">
+      <i class="fa fa-exclamation-triangle"></i>
+      <span>These dates are not available. Please select different dates.</span>
+    </div>
+
+    <!-- Form Messages -->
+    <div class="form-message error-message" *ngIf="errorMessage">
+      <i class="fa fa-exclamation-circle"></i>
+      <span>{{ errorMessage }}</span>
+    </div>
+
+    <div class="form-message success-message" *ngIf="successMessage">
+      <i class="fa fa-check-circle"></i>
+      <span>{{ successMessage }}</span>
+    </div>
+
+    <!-- Submit Button -->
+    <button
+      type="submit"
+      class="btn-book"
+      [disabled]="
+        bookingForm.invalid ||
+        isProcessing ||
+        !isAvailable ||
+        isCalculating ||
+        isCheckingAvailability
+      "
+    >
+      <span *ngIf="!isProcessing && !isCalculating && !isCheckingAvailability"
+        >Book Now</span
+      >
+      <span *ngIf="isProcessing">Processing...</span>
+      <span *ngIf="isCalculating && !isProcessing">Calculating Price...</span>
+      <span *ngIf="isCheckingAvailability && !isProcessing"
+        >Checking Availability...</span
+      >
+    </button>
+  </form>
+</div>

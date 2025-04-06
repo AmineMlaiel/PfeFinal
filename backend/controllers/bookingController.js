@@ -7,13 +7,29 @@ const User = require("../models/userModel");
 // @access  Private
 exports.createBooking = async (req, res) => {
   try {
-    // Set tenant to currently logged in user
-    req.body.tenant = req.user._id;
+    // Set userId to currently logged in user
+    req.body.userId = req.user._id;
 
-    const { property, startDate, endDate } = req.body;
+    const {
+      propertyId,
+      checkIn,
+      checkOut,
+      totalPrice,
+      guests,
+      contactInfo,
+      specialRequests,
+    } = req.body;
+
+    // Validate required fields
+    if (!propertyId || !checkIn || !checkOut || !guests || !contactInfo) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required booking information",
+      });
+    }
 
     // Check if property exists
-    const propertyDetails = await Property.findById(property);
+    const propertyDetails = await Property.findById(propertyId);
     if (!propertyDetails) {
       return res.status(404).json({
         success: false,
@@ -29,14 +45,26 @@ exports.createBooking = async (req, res) => {
       });
     }
 
+    // Parse dates
+    const startDate = new Date(checkIn);
+    const endDate = new Date(checkOut);
+
+    // Validate dates
+    if (endDate <= startDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Check-out date must be after check-in date",
+      });
+    }
+
     // Check if property is already booked for the requested dates
     const existingBooking = await Booking.findOne({
-      property,
-      status: { $in: ["approved", "pending"] },
+      propertyId,
+      status: { $in: ["confirmed", "pending"] },
       $or: [
         {
-          startDate: { $lte: endDate },
-          endDate: { $gte: startDate },
+          checkIn: { $lte: endDate },
+          checkOut: { $gte: startDate },
         },
       ],
     });
@@ -48,27 +76,32 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // Calculate total price
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const durationInDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-
-    if (durationInDays < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "Booking duration must be at least 1 day",
-      });
-    }
-
-    const totalPrice = durationInDays * propertyDetails.price;
-    req.body.totalPrice = totalPrice;
+    // Create booking with all the fields from the request
+    const bookingData = {
+      propertyId,
+      userId: req.user._id,
+      checkIn,
+      checkOut,
+      totalPrice,
+      guests,
+      contactInfo,
+      specialRequests,
+      status: "pending",
+      property: propertyId, // Setting both propertyId and property fields
+    };
 
     // Create booking
-    const booking = await Booking.create(req.body);
+    const booking = await Booking.create(bookingData);
+
+    // Get more information about the property for the response
+    const populatedBooking = await Booking.findById(booking._id).populate({
+      path: "property",
+      select: "title images address price host",
+    });
 
     res.status(201).json({
       success: true,
-      data: booking,
+      data: populatedBooking,
     });
   } catch (error) {
     res.status(400).json({
@@ -180,28 +213,22 @@ exports.getBooking = async (req, res) => {
 
 // @desc    Update booking status
 // @route   PUT /api/bookings/:id/status
-// @access  Private (Property Owner or Admin)
+// @access  Private
 exports.updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
 
-    // Validate status
-    const validStatuses = [
-      "pending",
-      "approved",
-      "rejected",
-      "cancelled",
-      "completed",
-    ];
-    if (!validStatuses.includes(status)) {
+    // Check if a valid status is provided
+    const validStatuses = ["pending", "confirmed", "cancelled", "completed"];
+    if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status",
+        message: "Invalid status provided",
       });
     }
 
+    // Find booking
     const booking = await Booking.findById(req.params.id);
-
     if (!booking) {
       return res.status(404).json({
         success: false,
@@ -209,56 +236,57 @@ exports.updateBookingStatus = async (req, res) => {
       });
     }
 
-    // Get the property to check ownership
-    const property = await Property.findById(booking.property);
-
-    // Check authorization: only property owner can approve/reject
-    // tenant can cancel their own booking
-    if (status === "cancelled") {
-      // Tenant can cancel their own booking
-      if (
-        booking.tenant.toString() !== req.user.id &&
-        property.owner.toString() !== req.user.id &&
-        req.user.role !== "admin"
-      ) {
-        return res.status(401).json({
-          success: false,
-          message: "Not authorized to cancel this booking",
-        });
-      }
-    } else {
-      // For other status changes, only property owner or admin can update
-      if (
-        property.owner.toString() !== req.user.id &&
-        req.user.role !== "admin"
-      ) {
-        return res.status(401).json({
-          success: false,
-          message: "Not authorized to update this booking",
-        });
-      }
+    // Find property
+    const property = await Property.findById(booking.propertyId);
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Associated property not found",
+      });
     }
 
-    // If approving, check for conflicting bookings
-    if (status === "approved") {
-      const conflictingBooking = await Booking.findOne({
-        property: booking.property,
+    // Check authorization
+    const isPropertyOwner =
+      property.host.toString() === req.user._id.toString();
+    const isTenant = booking.userId.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+
+    if (!isPropertyOwner && !isTenant && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this booking",
+      });
+    }
+
+    // If status is being set to confirmed, check for conflicts
+    if (status === "confirmed" && booking.status !== "confirmed") {
+      // Check for conflicting bookings
+      const conflictingBookings = await Booking.findOne({
+        propertyId: booking.propertyId,
         _id: { $ne: booking._id }, // Exclude current booking
-        status: "approved",
+        status: "confirmed",
         $or: [
           {
-            startDate: { $lte: booking.endDate },
-            endDate: { $gte: booking.startDate },
+            checkIn: { $lte: booking.checkOut },
+            checkOut: { $gte: booking.checkIn },
           },
         ],
       });
 
-      if (conflictingBooking) {
+      if (conflictingBookings) {
         return res.status(400).json({
           success: false,
-          message: "There is already an approved booking for these dates",
+          message: "There is a conflicting confirmed booking for these dates",
         });
       }
+    }
+
+    // Only property owner or admin can confirm a booking
+    if (status === "confirmed" && !isPropertyOwner && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: "Only the property owner or admin can confirm bookings",
+      });
     }
 
     // Update booking status
@@ -270,7 +298,7 @@ exports.updateBookingStatus = async (req, res) => {
       data: booking,
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -338,15 +366,15 @@ exports.addBookingMessage = async (req, res) => {
   }
 };
 
-// @desc    Get my bookings (as tenant)
+// @desc    Get bookings for logged in tenant
 // @route   GET /api/bookings/my-bookings
 // @access  Private
 exports.getMyBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ tenant: req.user._id })
+    const bookings = await Booking.find({ userId: req.user._id })
       .populate({
         path: "property",
-        select: "title images address price",
+        select: "title images address price host",
       })
       .sort({ createdAt: -1 });
 
@@ -356,14 +384,14 @@ exports.getMyBookings = async (req, res) => {
       data: bookings,
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
 
-// @desc    Get property bookings (as owner)
+// @desc    Get bookings for a property
 // @route   GET /api/bookings/property/:propertyId
 // @access  Private
 exports.getPropertyBookings = async (req, res) => {
@@ -377,21 +405,21 @@ exports.getPropertyBookings = async (req, res) => {
       });
     }
 
-    // Check if user is the property owner or admin
+    // Check if user is authorized to view these bookings
     if (
-      property.owner.toString() !== req.user.id &&
+      property.host.toString() !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
-      return res.status(401).json({
+      return res.status(403).json({
         success: false,
-        message: "Not authorized to view these bookings",
+        message: "Not authorized to view bookings for this property",
       });
     }
 
-    const bookings = await Booking.find({ property: req.params.propertyId })
+    const bookings = await Booking.find({ propertyId: req.params.propertyId })
       .populate({
-        path: "tenant",
-        select: "name email mobileNumber",
+        path: "userId",
+        select: "name email phone",
       })
       .sort({ createdAt: -1 });
 
@@ -401,20 +429,20 @@ exports.getPropertyBookings = async (req, res) => {
       data: bookings,
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
   }
 };
 
-// @desc    Get booking calendar data (availability for property)
+// @desc    Get booking calendar for a property (available/booked dates)
 // @route   GET /api/bookings/calendar/:propertyId
 // @access  Public
 exports.getBookingCalendar = async (req, res) => {
   try {
+    // Check if property exists
     const property = await Property.findById(req.params.propertyId);
-
     if (!property) {
       return res.status(404).json({
         success: false,
@@ -422,17 +450,16 @@ exports.getBookingCalendar = async (req, res) => {
       });
     }
 
-    // Get approved bookings for the property
+    // Get confirmed bookings for the property
     const bookings = await Booking.find({
-      property: req.params.propertyId,
-      status: "approved",
-    }).select("startDate endDate");
+      propertyId: req.params.propertyId,
+      status: "confirmed",
+    }).select("checkIn checkOut");
 
-    // Format as calendar data
+    // Format dates for frontend calendar
     const bookedDates = bookings.map((booking) => ({
-      start: booking.startDate,
-      end: booking.endDate,
-      bookingId: booking._id,
+      startDate: booking.checkIn,
+      endDate: booking.checkOut,
     }));
 
     res.status(200).json({
@@ -441,14 +468,181 @@ exports.getBookingCalendar = async (req, res) => {
         property: {
           id: property._id,
           title: property.title,
-          availableFrom: property.availability.availableFrom,
+          price: property.price,
           isAvailable: property.availability.isAvailable,
         },
         bookedDates,
       },
     });
   } catch (error) {
-    res.status(400).json({
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Check property availability for specific dates
+// @route   POST /api/bookings/check-availability
+// @access  Public
+exports.checkAvailability = async (req, res) => {
+  try {
+    const { propertyId, checkIn, checkOut } = req.body;
+
+    // Validate required fields
+    if (!propertyId || !checkIn || !checkOut) {
+      return res.status(400).json({
+        success: false,
+        message: "Property ID, check-in and check-out dates are required",
+      });
+    }
+
+    // Check if property exists
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
+    }
+
+    // Check if property is available for booking in general
+    if (!property.availability.isAvailable) {
+      return res.status(200).json({
+        success: true,
+        isAvailable: false,
+        message: "Property is not available for booking",
+      });
+    }
+
+    // Parse dates
+    const startDate = new Date(checkIn);
+    const endDate = new Date(checkOut);
+
+    // Validate dates
+    if (endDate <= startDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Check-out date must be after check-in date",
+      });
+    }
+
+    // Check if property is already booked for the requested dates
+    const existingBooking = await Booking.findOne({
+      propertyId,
+      status: { $in: ["confirmed", "pending"] },
+      $or: [
+        {
+          checkIn: { $lte: endDate },
+          checkOut: { $gte: startDate },
+        },
+      ],
+    });
+
+    // Return availability status
+    const isAvailable = !existingBooking;
+    res.status(200).json({
+      success: true,
+      isAvailable,
+      message: isAvailable
+        ? "Property is available for the selected dates"
+        : "Property is not available for the selected dates",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Calculate booking price
+// @route   POST /api/bookings/calculate
+// @access  Public
+exports.calculateBookingPrice = async (req, res) => {
+  try {
+    const { propertyId, checkIn, checkOut, guests } = req.body;
+
+    // Validate required fields
+    if (!propertyId || !checkIn || !checkOut || !guests) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Property ID, check-in, check-out dates and guests information are required",
+      });
+    }
+
+    // Check if property exists
+    const property = await Property.findById(propertyId);
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
+      });
+    }
+
+    // Parse dates
+    const startDate = new Date(checkIn);
+    const endDate = new Date(checkOut);
+
+    // Validate dates
+    if (endDate <= startDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Check-out date must be after check-in date",
+      });
+    }
+
+    // Calculate number of nights
+    const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+
+    if (nights < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking must be for at least one night",
+      });
+    }
+
+    // Calculate base price
+    const basePrice = nights * property.price;
+
+    // Calculate additional guest fee if applicable
+    let additionalGuestFee = 0;
+    const totalGuests = guests.adults + (guests.children || 0);
+
+    if (property.additionalGuestFee && totalGuests > property.baseGuests) {
+      const additionalGuests = totalGuests - property.baseGuests;
+      additionalGuestFee =
+        additionalGuests * property.additionalGuestFee * nights;
+    }
+
+    // Calculate cleaning fee
+    const cleaningFee = property.cleaningFee || 0;
+
+    // Calculate service fee (e.g., 10% of base price)
+    const serviceFee = Math.round(basePrice * 0.1);
+
+    // Calculate total price
+    const totalPrice =
+      basePrice + additionalGuestFee + cleaningFee + serviceFee;
+
+    // Return price breakdown
+    res.status(200).json({
+      success: true,
+      data: {
+        breakdown: {
+          basePrice,
+          nights,
+          nightlyRate: property.price,
+          additionalGuestFee,
+          cleaningFee,
+          serviceFee,
+          totalPrice,
+        },
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
       success: false,
       message: error.message,
     });

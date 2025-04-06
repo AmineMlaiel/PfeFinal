@@ -99,6 +99,48 @@
               </div>
             </div>
 
+            <!-- Account Type field -->
+            <div>
+              <label for="role" class="block text-sm font-medium text-gray-700"
+                >Account Type</label
+              >
+              <div class="mt-1">
+                <div class="flex gap-4">
+                  <div class="flex items-center">
+                    <input
+                      id="renter"
+                      name="role"
+                      type="radio"
+                      value="renter"
+                      [(ngModel)]="user.role"
+                      checked
+                      class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <label for="renter" class="block ml-2 text-sm text-gray-700"
+                      >Renter</label
+                    >
+                  </div>
+                  <div class="flex items-center">
+                    <input
+                      id="owner"
+                      name="role"
+                      type="radio"
+                      value="owner"
+                      [(ngModel)]="user.role"
+                      class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                    />
+                    <label for="owner" class="block ml-2 text-sm text-gray-700"
+                      >Property Owner</label
+                    >
+                  </div>
+                </div>
+                <p class="mt-1 text-xs text-gray-500">
+                  Select "Renter" if you want to browse and book properties.
+                  Select "Property Owner" if you want to list your properties.
+                </p>
+              </div>
+            </div>
+
             <!-- Password field -->
             <div>
               <label

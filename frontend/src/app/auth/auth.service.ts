@@ -2,7 +2,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, throwError } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  tap,
+  catchError,
+  throwError,
+  map,
+} from 'rxjs';
 import { User } from '../user.model';
 
 @Injectable({
@@ -26,13 +33,27 @@ export class AuthService {
     }
   }
 
-  // Get HTTP options with auth token
-  private getHttpOptions() {
-    return {
-      headers: new HttpHeaders({
+  // Get HTTP headers with auth token for API requests
+  getHttpHeaders(): HttpHeaders {
+    // Check if running in browser environment before accessing localStorage
+    if (typeof window === 'undefined') {
+      // Return default headers if in SSR environment
+      return new HttpHeaders({
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.getToken()}`,
-      }),
+      });
+    }
+
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      Authorization: token ? `Bearer ${token}` : '',
+    });
+  }
+
+  // Get HTTP options with auth headers
+  getHttpOptions(): any {
+    return {
+      headers: this.getHttpHeaders(),
     };
   }
 
@@ -93,7 +114,14 @@ export class AuthService {
 
   // Get current user data
   getCurrentUser(): Observable<any> {
-    return this.currentUserSubject.asObservable();
+    // Log the token for debugging
+    console.log('Token in getCurrentUser:', this.getToken());
+
+    return this.currentUserSubject
+      .asObservable()
+      .pipe(
+        tap((user) => console.log('Current user from BehaviorSubject:', user))
+      );
   }
 
   // Get token from localStorage
@@ -119,6 +147,46 @@ export class AuthService {
   isAdmin(): boolean {
     const userData = this.getUserData();
     return userData && userData.role === 'admin';
+  }
+
+  // Check if user is owner
+  isOwner(): boolean {
+    const userData = this.getUserData();
+    return userData && (userData.role === 'owner' || userData.role === 'admin');
+  }
+
+  // Check if user is renter
+  isRenter(): boolean {
+    const userData = this.getUserData();
+    return userData && userData.role === 'renter';
+  }
+
+  // Upgrade to owner
+  upgradeToOwner(): Observable<any> {
+    const options = {
+      headers: this.getHttpHeaders(),
+    };
+
+    return this.http
+      .post<{ success: boolean }>(
+        `${this.apiUrl}/upgrade-to-owner`,
+        {},
+        options
+      )
+      .pipe(
+        catchError(this.handleError),
+        tap((response: any) => {
+          if (response && response.success) {
+            // Update local user data with new role
+            const userData = this.getUserData();
+            if (userData) {
+              userData.role = 'owner';
+              localStorage.setItem('user', JSON.stringify(userData));
+              this.currentUserSubject.next(userData);
+            }
+          }
+        })
+      );
   }
 
   // Logout method
@@ -149,5 +217,10 @@ export class AuthService {
     }
 
     return throwError(() => error);
+  }
+
+  // Get the current user synchronously
+  getUser(): any {
+    return this.getUserData();
   }
 }
