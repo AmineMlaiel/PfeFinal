@@ -14,6 +14,7 @@ router.use(protect);
 // Property owner or admin routes
 router.post("/", propertyController.createProperty);
 router.get("/user/my-properties", propertyController.getMyProperties);
+router.get("/:id/check-ownership", propertyController.checkPropertyOwnership);
 router.put("/:id", propertyController.updateProperty);
 router.delete("/:id", propertyController.deleteProperty);
 router.post("/:id/images", propertyController.uploadPropertyImages);

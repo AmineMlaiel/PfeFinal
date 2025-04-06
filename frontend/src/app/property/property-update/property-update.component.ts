@@ -96,7 +96,9 @@ export class PropertyUpdateComponent
         const id = params.get('id');
         if (id) {
           this.propertyId = id;
-          this.loadPropertyData();
+
+          // First check ownership directly using the token-based API
+          this.checkOwnership();
         } else {
           this.router.navigate(['/properties']);
         }
@@ -237,6 +239,31 @@ export class PropertyUpdateComponent
     }
   }
 
+  // Check ownership directly first
+  checkOwnership(): void {
+    this.loading = true;
+
+    this.propertyService.checkPropertyOwnership(this.propertyId).subscribe({
+      next: (response: any) => {
+        console.log('Ownership check response:', response);
+
+        if (response.success && response.isOwner) {
+          console.log('Ownership confirmed, loading property data');
+          this.loadPropertyData();
+        } else {
+          console.error('User is not the owner of this property');
+          this.notAuthorized = true;
+          this.loading = false;
+        }
+      },
+      error: (err: any) => {
+        console.error('Error checking ownership:', err);
+        this.error = 'Failed to verify property ownership. Please try again.';
+        this.loading = false;
+      },
+    });
+  }
+
   loadPropertyData(): void {
     this.loading = true;
     this.propertyService.getProperty(this.propertyId).subscribe({
@@ -247,41 +274,30 @@ export class PropertyUpdateComponent
           return;
         }
 
-        const propertyData = response.data;
+        // Ownership is already verified, so we can directly load the property
+        this.property = response.data;
+        this.existingImages = [...this.property.images];
 
-        // Check if current user is the owner
-        this.authService.getCurrentUser().subscribe((user) => {
-          if (user && propertyData.host && user._id === propertyData.host._id) {
-            // Populate form with property data
-            this.property = propertyData;
-            this.existingImages = [...this.property.images];
+        // Make sure availability date is correctly formatted
+        if (typeof this.property.availability.availableFrom === 'string') {
+          this.property.availability.availableFrom = new Date(
+            this.property.availability.availableFrom
+          );
+        }
 
-            // Make sure availability date is correctly formatted
-            if (typeof this.property.availability.availableFrom === 'string') {
-              this.property.availability.availableFrom = new Date(
-                this.property.availability.availableFrom
-              );
-            }
+        // Extract latitude and longitude for the map
+        if (
+          this.property.location &&
+          this.property.location.coordinates &&
+          this.property.location.coordinates.length === 2
+        ) {
+          this.longitude = this.property.location.coordinates[0];
+          this.latitude = this.property.location.coordinates[1];
+        }
 
-            // Extract latitude and longitude for the map
-            if (
-              this.property.location &&
-              this.property.location.coordinates &&
-              this.property.location.coordinates.length === 2
-            ) {
-              this.longitude = this.property.location.coordinates[0];
-              this.latitude = this.property.location.coordinates[1];
-            }
-
-            // Initialize map after property data is loaded
-            setTimeout(() => this.initMap(), 500);
-          } else {
-            // Not authorized
-            this.notAuthorized = true;
-          }
-
-          this.loading = false;
-        });
+        // Initialize map after property data is loaded
+        setTimeout(() => this.initMap(), 500);
+        this.loading = false;
       },
       error: (err) => {
         console.error('Error loading property data:', err);

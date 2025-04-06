@@ -144,4 +144,9 @@ export class PropertyService {
       images: imageUrls,
     });
   }
+
+  // Check if current user is owner of the property
+  checkPropertyOwnership(propertyId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${propertyId}/check-ownership`);
+  }
 }

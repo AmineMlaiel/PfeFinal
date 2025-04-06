@@ -93,7 +93,14 @@ export class AuthService {
 
   // Get current user data
   getCurrentUser(): Observable<any> {
-    return this.currentUserSubject.asObservable();
+    // Log the token for debugging
+    console.log('Token in getCurrentUser:', this.getToken());
+
+    return this.currentUserSubject
+      .asObservable()
+      .pipe(
+        tap((user) => console.log('Current user from BehaviorSubject:', user))
+      );
   }
 
   // Get token from localStorage

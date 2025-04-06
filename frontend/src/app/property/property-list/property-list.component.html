@@ -130,16 +130,7 @@
     <div *ngIf="!loading && !error" class="properties-grid">
       <div *ngIf="properties.length === 0" class="no-results">
         <p>No properties found matching your criteria.</p>
-        <div class="debug-info">
-          <p>Debug Information:</p>
-          <p>API URL: http://localhost:3000/api/properties</p>
-          <p>
-            Try removing some filters or click reset to view all properties.
-          </p>
-          <button (click)="resetFilters()" class="btn btn-primary">
-            Reset Filters
-          </button>
-        </div>
+       
       </div>
 
       <div *ngFor="let property of properties" class="property-card">
