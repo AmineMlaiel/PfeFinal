@@ -1,0 +1,254 @@
+<div class="bg-gray-100 min-h-screen">
+  <!-- Header -->
+  <div class="bg-gradient-to-r from-blue-500 to-indigo-600 py-8">
+    <div class="container mx-auto px-4">
+      <h1 class="text-3xl font-bold text-white">My Profile</h1>
+      <p class="text-white opacity-80">Manage your account information</p>
+    </div>
+  </div>
+
+  <!-- Content Container -->
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+      <!-- Left Side: User Info -->
+      <div class="lg:w-1/4">
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="flex flex-col items-center text-center">
+            <div
+              class="w-24 h-24 bg-gray-300 rounded-full flex items-center justify-center mb-4"
+            >
+              <span class="text-4xl font-bold text-gray-500"
+                >{{ user?.name?.charAt(0)
+                }}{{ user?.lastName?.charAt(0) }}</span
+              >
+            </div>
+            <h2 class="text-xl font-semibold">
+              {{ user?.name }} {{ user?.lastName }}
+            </h2>
+            <p class="text-gray-600 mb-4">{{ user?.email }}</p>
+            <div class="w-full">
+              <button
+                (click)="logout()"
+                class="w-full py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Side: Forms -->
+      <div class="lg:w-3/4">
+        <!-- Profile Information Form -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4">Profile Information</h2>
+          <form [formGroup]="profileForm" (ngSubmit)="onProfileSubmit()">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- First Name -->
+              <div>
+                <label
+                  for="name"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >First Name</label
+                >
+                <input
+                  id="name"
+                  formControlName="name"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div
+                  *ngIf="
+                    profileForm.get('name')?.invalid &&
+                    profileForm.get('name')?.touched
+                  "
+                  class="text-red-500 text-xs mt-1"
+                >
+                  First name is required
+                </div>
+              </div>
+
+              <!-- Last Name -->
+              <div>
+                <label
+                  for="lastName"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Last Name</label
+                >
+                <input
+                  id="lastName"
+                  formControlName="lastName"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div
+                  *ngIf="
+                    profileForm.get('lastName')?.invalid &&
+                    profileForm.get('lastName')?.touched
+                  "
+                  class="text-red-500 text-xs mt-1"
+                >
+                  Last name is required
+                </div>
+              </div>
+
+              <!-- Email -->
+              <div>
+                <label
+                  for="email"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Email</label
+                >
+                <input
+                  id="email"
+                  formControlName="email"
+                  type="email"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div
+                  *ngIf="
+                    profileForm.get('email')?.invalid &&
+                    profileForm.get('email')?.touched
+                  "
+                  class="text-red-500 text-xs mt-1"
+                >
+                  Please enter a valid email
+                </div>
+              </div>
+
+              <!-- Mobile Number -->
+              <div>
+                <label
+                  for="mobileNumber"
+                  class="block text-sm font-medium text-gray-700 mb-1"
+                  >Mobile Number</label
+                >
+                <input
+                  id="mobileNumber"
+                  formControlName="mobileNumber"
+                  type="text"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                />
+                <div
+                  *ngIf="
+                    profileForm.get('mobileNumber')?.invalid &&
+                    profileForm.get('mobileNumber')?.touched
+                  "
+                  class="text-red-500 text-xs mt-1"
+                >
+                  Mobile number is required
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-6">
+              <button
+                type="submit"
+                [disabled]="profileForm.invalid || loading"
+                class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center"
+              >
+                <span
+                  *ngIf="loading"
+                  class="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-white rounded-full"
+                ></span>
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Change Password Form -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+          <h2 class="text-xl font-semibold mb-4">Change Password</h2>
+          <form [formGroup]="passwordForm" (ngSubmit)="onPasswordSubmit()">
+            <!-- Current Password -->
+            <div class="mb-4">
+              <label
+                for="currentPassword"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Current Password</label
+              >
+              <input
+                id="currentPassword"
+                formControlName="currentPassword"
+                type="password"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <div
+                *ngIf="
+                  passwordForm.get('currentPassword')?.invalid &&
+                  passwordForm.get('currentPassword')?.touched
+                "
+                class="text-red-500 text-xs mt-1"
+              >
+                Current password is required
+              </div>
+            </div>
+
+            <!-- New Password -->
+            <div class="mb-4">
+              <label
+                for="newPassword"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >New Password</label
+              >
+              <input
+                id="newPassword"
+                formControlName="newPassword"
+                type="password"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <div
+                *ngIf="
+                  passwordForm.get('newPassword')?.invalid &&
+                  passwordForm.get('newPassword')?.touched
+                "
+                class="text-red-500 text-xs mt-1"
+              >
+                Password must be at least 6 characters
+              </div>
+            </div>
+
+            <!-- Confirm New Password -->
+            <div class="mb-4">
+              <label
+                for="confirmPassword"
+                class="block text-sm font-medium text-gray-700 mb-1"
+                >Confirm New Password</label
+              >
+              <input
+                id="confirmPassword"
+                formControlName="confirmPassword"
+                type="password"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <div
+                *ngIf="passwordForm.hasError('passwordMismatch')"
+                class="text-red-500 text-xs mt-1"
+              >
+                Passwords do not match
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="mt-6">
+              <button
+                type="submit"
+                [disabled]="passwordForm.invalid || passwordLoading"
+                class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex justify-center"
+              >
+                <span
+                  *ngIf="passwordLoading"
+                  class="animate-spin inline-block h-4 w-4 mr-2 border-t-2 border-white rounded-full"
+                ></span>
+                Update Password
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
