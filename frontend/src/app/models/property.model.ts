@@ -28,6 +28,8 @@ export interface Property {
   rating?: number;
   reviewCount?: number;
   isBookmarked?: boolean;
+  isApproved?: boolean;
+  isActive?: boolean;
   host?: {
     _id: string;
     name?: string;

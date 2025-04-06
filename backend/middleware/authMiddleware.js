@@ -52,6 +52,17 @@ const admin = (req, res, next) => {
 };
 
 /**
+ * Middleware to check if user is an owner
+ */
+const owner = (req, res, next) => {
+  if (req.user && (req.user.role === "owner" || req.user.role === "admin")) {
+    next();
+  } else {
+    res.status(403).json({ message: "Not authorized as a property owner" });
+  }
+};
+
+/**
  * Middleware to check if user is verified
  */
 const verified = (req, res, next) => {
@@ -62,4 +73,4 @@ const verified = (req, res, next) => {
   }
 };
 
-module.exports = { protect, admin, verified };
+module.exports = { protect, admin, owner, verified };

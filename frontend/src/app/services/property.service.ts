@@ -13,7 +13,8 @@ export class PropertyService {
 
   // Get all properties with optional filters
   getProperties(filters: any = {}): Observable<any> {
-    let params = new HttpParams();
+    // Add isApproved=true by default to only show approved properties
+    let params = new HttpParams().append('isApproved', 'true');
 
     // Add filters to params
     Object.keys(filters).forEach((key) => {

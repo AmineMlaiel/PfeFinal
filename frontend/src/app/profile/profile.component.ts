@@ -25,6 +25,7 @@ export class ProfileComponent implements OnInit {
   user: any = null;
   loading = false;
   passwordLoading = false;
+  upgradeLoading = false;
   isBrowser: boolean;
 
   constructor(
@@ -273,6 +274,58 @@ export class ProfileComponent implements OnInit {
             });
           }
         }
+      },
+    });
+  }
+
+  // Upgrade account from renter to owner
+  upgradeToOwner() {
+    if (!this.isBrowser) {
+      return;
+    }
+
+    this.upgradeLoading = true;
+
+    this.authService.upgradeToOwner().subscribe({
+      next: (response) => {
+        this.upgradeLoading = false;
+        if (response.success) {
+          // Update local UI to reflect new role
+          if (this.user) {
+            this.user.role = 'owner';
+          }
+
+          Swal.fire({
+            title: 'Account Upgraded',
+            text: 'Your account has been upgraded to property owner!',
+            icon: 'success',
+            confirmButtonText: 'Start Listing Properties',
+          }).then((result) => {
+            if (result.isConfirmed) {
+              this.router.navigate(['/properties/add']);
+            }
+          });
+        } else {
+          Swal.fire({
+            title: 'Upgrade Failed',
+            text: response.message || 'Failed to upgrade your account.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+          });
+        }
+      },
+      error: (error) => {
+        this.upgradeLoading = false;
+        console.error('Error upgrading account:', error);
+
+        Swal.fire({
+          title: 'Upgrade Failed',
+          text:
+            error.error?.message ||
+            'An error occurred while upgrading your account.',
+          icon: 'error',
+          confirmButtonText: 'OK',
+        });
       },
     });
   }

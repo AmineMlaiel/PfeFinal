@@ -13,6 +13,7 @@ import { AuthService } from '../auth/auth.service';
 export class HeaderComponent implements OnInit {
   isLoggedIn = false;
   isAdmin = false;
+  isOwner = false;
   mobileMenuOpen = false;
   isBrowser: boolean;
 
@@ -30,7 +31,7 @@ export class HeaderComponent implements OnInit {
         this.isLoggedIn = loggedIn;
 
         if (loggedIn) {
-          this.checkAdminStatus();
+          this.checkUserRoles();
         }
       });
     }
@@ -47,10 +48,12 @@ export class HeaderComponent implements OnInit {
     this.mobileMenuOpen = !this.mobileMenuOpen;
   }
 
-  private checkAdminStatus(): void {
+  private checkUserRoles(): void {
     if (this.isBrowser) {
       const userData = this.authService.getUserData();
       this.isAdmin = userData && userData.role === 'admin';
+      this.isOwner =
+        userData && (userData.role === 'owner' || userData.role === 'admin');
     }
   }
 }

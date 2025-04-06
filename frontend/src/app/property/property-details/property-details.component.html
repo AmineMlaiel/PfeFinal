@@ -268,7 +268,7 @@
       <div class="booking-card" *ngIf="!isOwner">
         <div class="booking-card-header">
           <div class="booking-price">
-            <span class="price">${{ property.price }}</span>
+            <span class="price">DT{{ property.price }}</span>
             <span class="night">/ night</span>
           </div>
           <div class="booking-rating">
@@ -311,12 +311,12 @@
 
           <div class="booking-details" *ngIf="bookingDuration > 0">
             <div class="booking-detail-item">
-              <span>${{ property.price }} x {{ bookingDuration }} nights</span>
-              <span>${{ bookingTotal }}</span>
+              <span>DT{{ property.price }} x {{ bookingDuration }} nights</span>
+              <span>DT{{ bookingTotal }}</span>
             </div>
             <div class="booking-total">
               <span>Total</span>
-              <span>${{ bookingTotal }}</span>
+              <span>DT{{ bookingTotal }}</span>
             </div>
           </div>
 

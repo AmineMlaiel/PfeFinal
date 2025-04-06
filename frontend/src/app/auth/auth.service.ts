@@ -2,7 +2,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, tap, catchError, throwError } from 'rxjs';
+import {
+  BehaviorSubject,
+  Observable,
+  tap,
+  catchError,
+  throwError,
+  map,
+} from 'rxjs';
 import { User } from '../user.model';
 
 @Injectable({
@@ -26,13 +33,19 @@ export class AuthService {
     }
   }
 
-  // Get HTTP options with auth token
-  private getHttpOptions() {
+  // Get HTTP headers with auth token for API requests
+  getHttpHeaders(): HttpHeaders {
+    const token = localStorage.getItem('token');
+    return new HttpHeaders({
+      'Content-Type': 'application/json',
+      Authorization: token ? `Bearer ${token}` : '',
+    });
+  }
+
+  // Get HTTP options with auth headers
+  getHttpOptions(): any {
     return {
-      headers: new HttpHeaders({
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.getToken()}`,
-      }),
+      headers: this.getHttpHeaders(),
     };
   }
 
@@ -126,6 +139,46 @@ export class AuthService {
   isAdmin(): boolean {
     const userData = this.getUserData();
     return userData && userData.role === 'admin';
+  }
+
+  // Check if user is owner
+  isOwner(): boolean {
+    const userData = this.getUserData();
+    return userData && (userData.role === 'owner' || userData.role === 'admin');
+  }
+
+  // Check if user is renter
+  isRenter(): boolean {
+    const userData = this.getUserData();
+    return userData && userData.role === 'renter';
+  }
+
+  // Upgrade to owner
+  upgradeToOwner(): Observable<any> {
+    const options = {
+      headers: this.getHttpHeaders(),
+    };
+
+    return this.http
+      .post<{ success: boolean }>(
+        `${this.apiUrl}/upgrade-to-owner`,
+        {},
+        options
+      )
+      .pipe(
+        catchError(this.handleError),
+        tap((response: any) => {
+          if (response && response.success) {
+            // Update local user data with new role
+            const userData = this.getUserData();
+            if (userData) {
+              userData.role = 'owner';
+              localStorage.setItem('user', JSON.stringify(userData));
+              this.currentUserSubject.next(userData);
+            }
+          }
+        })
+      );
   }
 
   // Logout method

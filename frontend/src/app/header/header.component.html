@@ -10,11 +10,30 @@
         <li>
           <a routerLink="/properties" routerLinkActive="active">Properties</a>
         </li>
-        @if (isLoggedIn) {
-        <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
-        @if (isAdmin) {
-        <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
+
+        @if (isLoggedIn) { @if (isOwner) {
+        <li>
+          <a routerLink="/properties/add" routerLinkActive="active"
+            >List a Property</a
+          >
+        </li>
+        <li>
+          <a routerLink="/properties/my-properties" routerLinkActive="active"
+            >My Properties</a
+          >
+        </li>
+        } @if (isAdmin) {
+        <li>
+          <a routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
+        </li>
+        <li>
+          <a routerLink="/admin/properties" routerLinkActive="active"
+            >Property Approvals</a
+          >
+        </li>
         }
+
+        <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
         <li><button class="btn-logout" (click)="logout()">Logout</button></li>
         } @else {
         <li><a routerLink="/login" routerLinkActive="active">Login</a></li>
@@ -40,11 +59,30 @@
       <li>
         <a routerLink="/properties" routerLinkActive="active">Properties</a>
       </li>
-      @if (isLoggedIn) {
-      <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
-      @if (isAdmin) {
-      <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
+
+      @if (isLoggedIn) { @if (isOwner) {
+      <li>
+        <a routerLink="/properties/add" routerLinkActive="active"
+          >List a Property</a
+        >
+      </li>
+      <li>
+        <a routerLink="/properties/my-properties" routerLinkActive="active"
+          >My Properties</a
+        >
+      </li>
+      } @if (isAdmin) {
+      <li>
+        <a routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
+      </li>
+      <li>
+        <a routerLink="/admin/properties" routerLinkActive="active"
+          >Property Approvals</a
+        >
+      </li>
       }
+
+      <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
       <li><button class="btn-logout" (click)="logout()">Logout</button></li>
       } @else {
       <li><a routerLink="/login" routerLinkActive="active">Login</a></li>

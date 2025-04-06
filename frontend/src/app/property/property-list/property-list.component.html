@@ -130,7 +130,6 @@
     <div *ngIf="!loading && !error" class="properties-grid">
       <div *ngIf="properties.length === 0" class="no-results">
         <p>No properties found matching your criteria.</p>
-       
       </div>
 
       <div *ngFor="let property of properties" class="property-card">
@@ -143,7 +142,7 @@
             "
             [alt]="property.title"
           />
-          <div class="property-price">${{ property.price }}/night</div>
+          <div class="property-price">DT{{ property.price }}/night</div>
         </div>
         <div class="property-details">
           <h3>{{ property.title }}</h3>

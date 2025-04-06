@@ -205,9 +205,9 @@ export class PropertyDetailsComponent
 
       // Create an info window for the marker
       const infoWindow = new google.maps.InfoWindow({
-        content: `<div><strong>${
+        content: `<div><strong>DT{
           this.property.title || 'Property'
-        }</strong><br>${this.property.address?.street || ''}</div>`,
+        }</strong><br>DT{this.property.address?.street || ''}</div>`,
       });
 
       // Check if we can use the newer AdvancedMarkerElement
