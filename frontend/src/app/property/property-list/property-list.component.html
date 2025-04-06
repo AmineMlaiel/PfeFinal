@@ -1,0 +1,203 @@
+<div class="property-list-container">
+  <div class="filters-section">
+    <h2>Find Your Perfect Property</h2>
+    <div class="filters-form">
+      <div class="form-group">
+        <label for="search">Search</label>
+        <input
+          type="text"
+          id="search"
+          [(ngModel)]="filters.search"
+          class="form-control"
+          placeholder="Search properties..."
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="propertyType">Property Type</label>
+        <select
+          id="propertyType"
+          [(ngModel)]="filters.propertyType"
+          class="form-control"
+        >
+          <option value="">All Types</option>
+          <option value="apartment">Apartment</option>
+          <option value="house">House</option>
+          <option value="condo">Condo</option>
+          <option value="villa">Villa</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="minPrice">Min Price</label>
+          <input
+            type="number"
+            id="minPrice"
+            [(ngModel)]="filters.minPrice"
+            class="form-control"
+            placeholder="Min"
+          />
+        </div>
+        <div class="form-group">
+          <label for="maxPrice">Max Price</label>
+          <input
+            type="number"
+            id="maxPrice"
+            [(ngModel)]="filters.maxPrice"
+            class="form-control"
+            placeholder="Max"
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bedrooms">Bedrooms</label>
+          <select
+            id="bedrooms"
+            [(ngModel)]="filters.bedrooms"
+            class="form-control"
+          >
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+            <option value="4">4+</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="bathrooms">Bathrooms</label>
+          <select
+            id="bathrooms"
+            [(ngModel)]="filters.bathrooms"
+            class="form-control"
+          >
+            <option value="">Any</option>
+            <option value="1">1+</option>
+            <option value="2">2+</option>
+            <option value="3">3+</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="filter-buttons">
+        <button (click)="searchProperties()" class="btn btn-primary">
+          Apply Filters
+        </button>
+        <button (click)="resetFilters()" class="btn btn-secondary">
+          Reset
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="properties-section">
+    <div *ngIf="loading" class="loader">
+      <div class="spinner"></div>
+      <p>Loading properties...</p>
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <!-- Current filters summary -->
+    <div *ngIf="!loading && !error" class="active-filters">
+      <h3>Active Filters:</h3>
+      <div class="filter-pills">
+        <span *ngIf="filters.propertyType" class="filter-pill"
+          >Type: {{ filters.propertyType }}</span
+        >
+        <span *ngIf="filters.minPrice" class="filter-pill"
+          >Min Price: ${{ filters.minPrice }}</span
+        >
+        <span *ngIf="filters.maxPrice" class="filter-pill"
+          >Max Price: ${{ filters.maxPrice }}</span
+        >
+        <span *ngIf="filters.bedrooms" class="filter-pill"
+          >Bedrooms: {{ filters.bedrooms }}+</span
+        >
+        <span *ngIf="filters.bathrooms" class="filter-pill"
+          >Bathrooms: {{ filters.bathrooms }}+</span
+        >
+        <span *ngIf="filters.search" class="filter-pill"
+          >Search: "{{ filters.search }}"</span
+        >
+      </div>
+    </div>
+
+    <div *ngIf="!loading && !error" class="properties-grid">
+      <div *ngIf="properties.length === 0" class="no-results">
+        <p>No properties found matching your criteria.</p>
+        <div class="debug-info">
+          <p>Debug Information:</p>
+          <p>API URL: http://localhost:3000/api/properties</p>
+          <p>
+            Try removing some filters or click reset to view all properties.
+          </p>
+          <button (click)="resetFilters()" class="btn btn-primary">
+            Reset Filters
+          </button>
+        </div>
+      </div>
+
+      <div *ngFor="let property of properties" class="property-card">
+        <div class="property-image">
+          <img
+            [src]="
+              property.images && property.images.length
+                ? property.images[0]
+                : 'assets/images/property-placeholder.jpg'
+            "
+            [alt]="property.title"
+          />
+          <div class="property-price">${{ property.price }}/night</div>
+        </div>
+        <div class="property-details">
+          <h3>{{ property.title }}</h3>
+          <div class="property-location">
+            <i class="fa fa-map-marker"></i>
+            {{
+              property["address"] && property["address"]["city"]
+                ? property["address"]["city"]
+                : ""
+            }},
+            {{
+              property["address"] && property["address"]["state"]
+                ? property["address"]["state"]
+                : ""
+            }}
+          </div>
+          <div class="property-features">
+            <span><i class="fa fa-bed"></i> {{ property.bedrooms }} Beds</span>
+            <span
+              ><i class="fa fa-bath"></i> {{ property.bathrooms }} Baths</span
+            >
+            <span
+              ><i class="fa fa-ruler-combined"></i> {{ property.area }} sq
+              ft</span
+            >
+          </div>
+          <p class="property-description">
+            {{ property.description | slice : 0 : 100 }}...
+          </p>
+          <div class="property-actions">
+            <a
+              [routerLink]="['/properties', property._id]"
+              class="btn btn-primary"
+              >View Details</a
+            >
+            <button
+              *ngIf="isLoggedIn"
+              (click)="bookmarkProperty(property._id)"
+              class="btn btn-outline"
+            >
+              <i class="fa fa-heart"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

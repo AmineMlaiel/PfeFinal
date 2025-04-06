@@ -1,0 +1,736 @@
+// Main container
+.property-details-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #333;
+}
+
+// Loading and error containers
+.loading-container,
+.error-container {
+  text-align: center;
+  padding: 60px 20px;
+
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(0, 123, 255, 0.2);
+    border-left-color: #007bff;
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    color: #666;
+    font-size: 1.1rem;
+  }
+}
+
+.error-container {
+  .error-message {
+    padding: 15px;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 5px;
+    color: #721c24;
+    margin-bottom: 20px;
+  }
+
+  .btn-primary {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+      background-color: #0056b3;
+    }
+  }
+}
+
+// Property header
+.property-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+
+  .header-left {
+    flex: 1;
+    min-width: 300px;
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0 0 10px;
+      color: #333;
+    }
+
+    .property-location {
+      font-size: 1.1rem;
+      color: #666;
+      margin-bottom: 15px;
+
+      i {
+        color: #007bff;
+        margin-right: 8px;
+      }
+    }
+
+    .property-rating {
+      display: flex;
+      align-items: center;
+
+      .stars {
+        display: flex;
+        margin-right: 10px;
+
+        .star {
+          color: #ffc107;
+          margin-right: 3px;
+
+          .filled {
+            color: #ffc107;
+          }
+        }
+      }
+
+      .review-count {
+        color: #666;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .header-right {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+
+    button {
+      padding: 10px 15px;
+      border-radius: 5px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s;
+
+      i {
+        margin-right: 6px;
+      }
+
+      &.btn-secondary {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+
+        &:hover {
+          background-color: #5a6268;
+        }
+      }
+
+      &.btn-danger {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+
+        &:hover {
+          background-color: #c82333;
+        }
+      }
+
+      &.btn-outline {
+        background-color: transparent;
+        border: 1px solid #007bff;
+        color: #007bff;
+
+        &:hover {
+          background-color: rgba(0, 123, 255, 0.1);
+        }
+
+        &.bookmarked {
+          background-color: rgba(0, 123, 255, 0.1);
+
+          i {
+            color: #dc3545;
+          }
+        }
+      }
+    }
+  }
+}
+
+// Property images section
+.property-images {
+  margin-bottom: 40px;
+
+  .main-image {
+    width: 100%;
+    height: 500px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 15px;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+
+      &:hover {
+        transform: scale(1.02);
+      }
+    }
+  }
+
+  .image-thumbnails {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+
+    .thumbnail {
+      width: 100px;
+      height: 70px;
+      border-radius: 5px;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.3s, transform 0.3s;
+
+      &:hover {
+        opacity: 0.9;
+      }
+
+      &.active {
+        opacity: 1;
+        transform: scale(1.05);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        border: 2px solid #007bff;
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+  }
+}
+
+// Property main content
+.property-main {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 40px;
+
+  .property-info {
+    flex: 1;
+    min-width: 300px;
+
+    h2 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      margin: 0 0 20px;
+      color: #333;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .property-description {
+      margin-bottom: 40px;
+
+      p {
+        line-height: 1.6;
+        color: #555;
+      }
+    }
+
+    .property-details-section {
+      margin-bottom: 40px;
+
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+
+        .detail-item {
+          display: flex;
+          align-items: center;
+
+          i {
+            font-size: 1.5rem;
+            color: #007bff;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+          }
+
+          div {
+            h4 {
+              margin: 0 0 5px;
+              font-size: 1rem;
+              color: #666;
+            }
+
+            p {
+              margin: 0;
+              font-size: 1.1rem;
+              font-weight: 600;
+              color: #333;
+            }
+          }
+        }
+      }
+    }
+
+    .property-amenities {
+      margin-bottom: 40px;
+
+      .amenities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 15px;
+
+        .amenity-item {
+          display: flex;
+          align-items: center;
+          padding: 10px;
+          background-color: #f8f9fa;
+          border-radius: 5px;
+
+          i {
+            color: #007bff;
+            margin-right: 10px;
+            width: 18px;
+            text-align: center;
+          }
+
+          span {
+            font-size: 0.9rem;
+          }
+        }
+      }
+    }
+
+    .property-location-section {
+      margin-bottom: 40px;
+
+      .address-details {
+        margin-bottom: 20px;
+
+        p {
+          margin: 5px 0;
+          color: #555;
+        }
+      }
+
+      .map-placeholder {
+        width: 100%;
+        height: 300px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        overflow: hidden;
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+    }
+
+    .property-reviews {
+      h3 {
+        font-size: 1.4rem;
+        margin: 0 0 15px;
+        font-weight: 600;
+      }
+
+      .review-form {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 30px;
+
+        .rating-select {
+          margin-bottom: 15px;
+
+          label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+          }
+
+          .star-rating {
+            display: flex;
+
+            .star {
+              cursor: pointer;
+              font-size: 1.5rem;
+              color: #ccc;
+              margin-right: 5px;
+
+              &:hover ~ .star {
+                color: #ccc;
+              }
+
+              .filled {
+                color: #ffc107;
+              }
+            }
+          }
+        }
+
+        .form-group {
+          margin-bottom: 15px;
+
+          label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+          }
+
+          textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+            font-family: inherit;
+
+            &:focus {
+              outline: none;
+              border-color: #007bff;
+            }
+          }
+        }
+
+        .btn-primary {
+          background-color: #007bff;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 5px;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: background-color 0.3s;
+
+          &:hover {
+            background-color: #0056b3;
+          }
+
+          &:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+          }
+        }
+      }
+
+      .thank-you-message {
+        background-color: #d4edda;
+        color: #155724;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+
+      .review-signin-prompt {
+        margin-bottom: 20px;
+
+        a {
+          color: #007bff;
+          text-decoration: none;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .reviews-list {
+        margin-top: 30px;
+
+        .review-item {
+          padding: 20px 0;
+          border-bottom: 1px solid #eee;
+
+          &:last-child {
+            border-bottom: none;
+          }
+
+          .review-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+
+            .reviewer-info {
+              display: flex;
+              align-items: center;
+
+              .reviewer-avatar {
+                width: 40px;
+                height: 40px;
+                background-color: #007bff;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin-right: 15px;
+
+                i {
+                  color: white;
+                }
+              }
+
+              .reviewer-details {
+                h4 {
+                  margin: 0 0 5px;
+                  font-size: 1.1rem;
+                }
+
+                .review-date {
+                  margin: 0;
+                  font-size: 0.8rem;
+                  color: #666;
+                }
+              }
+            }
+
+            .review-rating {
+              .star {
+                color: #ffc107;
+                margin-right: 2px;
+              }
+            }
+          }
+
+          .review-content {
+            p {
+              margin: 0;
+              line-height: 1.5;
+              color: #555;
+            }
+          }
+        }
+      }
+
+      .no-reviews {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        text-align: center;
+        color: #666;
+      }
+    }
+  }
+
+  // Booking card
+  .booking-card {
+    width: 350px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    align-self: flex-start;
+    position: sticky;
+    top: 20px;
+    background-color: white;
+
+    .booking-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+
+      .booking-price {
+        .price {
+          font-size: 1.8rem;
+          font-weight: 700;
+          color: #333;
+        }
+
+        .night {
+          font-size: 1rem;
+          color: #666;
+        }
+      }
+
+      .booking-rating {
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+
+        i {
+          color: #ffc107;
+          margin-right: 5px;
+        }
+      }
+    }
+
+    .booking-form {
+      .date-inputs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+
+        .form-group {
+          flex: 1;
+
+          label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #666;
+          }
+
+          input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+
+            &:focus {
+              outline: none;
+              border-color: #007bff;
+            }
+          }
+        }
+      }
+
+      .booking-error {
+        color: #dc3545;
+        font-size: 0.9rem;
+        margin-bottom: 15px;
+      }
+
+      .booking-details {
+        margin-bottom: 20px;
+
+        .booking-detail-item {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 10px;
+          font-size: 0.9rem;
+          color: #555;
+        }
+
+        .booking-total {
+          display: flex;
+          justify-content: space-between;
+          font-weight: 700;
+          padding-top: 10px;
+          border-top: 1px solid #eee;
+          margin-top: 10px;
+        }
+      }
+
+      .btn-book {
+        width: 100%;
+        padding: 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background-color: #0056b3;
+        }
+      }
+
+      .booking-note {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 0.8rem;
+        color: #666;
+      }
+    }
+  }
+}
+
+// Animation
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+// Responsive styles
+@media (max-width: 992px) {
+  .property-main {
+    flex-direction: column;
+
+    .booking-card {
+      width: 100%;
+      position: static;
+      margin-top: 30px;
+    }
+  }
+
+  .property-images {
+    .main-image {
+      height: 400px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .property-header {
+    flex-direction: column;
+
+    .header-right {
+      margin-top: 20px;
+      align-self: flex-start;
+    }
+  }
+
+  .property-images {
+    .main-image {
+      height: 300px;
+    }
+  }
+
+  .property-details-section {
+    .details-grid {
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    }
+  }
+}
+
+@media (max-width: 576px) {
+  .property-header {
+    .header-left {
+      h1 {
+        font-size: 2rem;
+      }
+    }
+  }
+
+  .property-images {
+    .main-image {
+      height: 250px;
+    }
+
+    .image-thumbnails {
+      .thumbnail {
+        width: 80px;
+        height: 60px;
+      }
+    }
+  }
+}

@@ -1,1 +1,55 @@
-<p>header works!</p>
+<header class="main-header">
+  <div class="container">
+    <div class="logo">
+      <a routerLink="/home">Rental App</a>
+    </div>
+
+    <nav class="main-nav">
+      <ul>
+        <li><a routerLink="/home" routerLinkActive="active">Home</a></li>
+        <li>
+          <a routerLink="/properties" routerLinkActive="active">Properties</a>
+        </li>
+        @if (isLoggedIn) {
+        <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
+        @if (isAdmin) {
+        <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
+        }
+        <li><button class="btn-logout" (click)="logout()">Logout</button></li>
+        } @else {
+        <li><a routerLink="/login" routerLinkActive="active">Login</a></li>
+        <li>
+          <a routerLink="/signup" routerLinkActive="active" class="btn-signup"
+            >Sign Up</a
+          >
+        </li>
+        }
+      </ul>
+    </nav>
+
+    <button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+
+  <div class="mobile-menu" [class.active]="mobileMenuOpen">
+    <ul>
+      <li><a routerLink="/home" routerLinkActive="active">Home</a></li>
+      <li>
+        <a routerLink="/properties" routerLinkActive="active">Properties</a>
+      </li>
+      @if (isLoggedIn) {
+      <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
+      @if (isAdmin) {
+      <li><a routerLink="/admin" routerLinkActive="active">Admin</a></li>
+      }
+      <li><button class="btn-logout" (click)="logout()">Logout</button></li>
+      } @else {
+      <li><a routerLink="/login" routerLinkActive="active">Login</a></li>
+      <li><a routerLink="/signup" routerLinkActive="active">Sign Up</a></li>
+      }
+    </ul>
+  </div>
+</header>

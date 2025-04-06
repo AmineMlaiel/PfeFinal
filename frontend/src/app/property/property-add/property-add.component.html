@@ -1,0 +1,300 @@
+<div class="property-add-container">
+  <div class="form-header">
+    <h1>Add New Property</h1>
+    <p>Fill out the form below to list your property</p>
+  </div>
+
+  <!-- Error and success messages -->
+  <div *ngIf="error" class="error-message">
+    {{ error }}
+  </div>
+
+  <div *ngIf="success" class="success-message">
+    Property successfully created! Redirecting...
+  </div>
+
+  <!-- Property form -->
+  <form *ngIf="!success" (ngSubmit)="submitProperty()" novalidate>
+    <!-- Basic Information Section -->
+    <div class="form-section">
+      <h2>Basic Information</h2>
+
+      <div class="form-group">
+        <label for="title"
+          >Property Title <span class="required">*</span></label
+        >
+        <input
+          type="text"
+          id="title"
+          name="title"
+          [(ngModel)]="property.title"
+          placeholder="e.g., Modern Apartment in Downtown"
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="description"
+          >Description <span class="required">*</span></label
+        >
+        <textarea
+          id="description"
+          name="description"
+          [(ngModel)]="property.description"
+          rows="5"
+          placeholder="Describe your property in detail..."
+          required
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="property-type"
+            >Property Type <span class="required">*</span></label
+          >
+          <select
+            id="property-type"
+            name="propertyType"
+            [(ngModel)]="property.propertyType"
+            required
+          >
+            <option value="" disabled>Select property type</option>
+            <option *ngFor="let type of propertyTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="price"
+            >Price per Night ($) <span class="required">*</span></label
+          >
+          <input
+            type="number"
+            id="price"
+            name="price"
+            [(ngModel)]="property.price"
+            min="1"
+            placeholder="e.g., 100"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bedrooms">Bedrooms <span class="required">*</span></label>
+          <input
+            type="number"
+            id="bedrooms"
+            name="bedrooms"
+            [(ngModel)]="property.bedrooms"
+            min="0"
+            placeholder="e.g., 2"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="bathrooms"
+            >Bathrooms <span class="required">*</span></label
+          >
+          <input
+            type="number"
+            id="bathrooms"
+            name="bathrooms"
+            [(ngModel)]="property.bathrooms"
+            min="0"
+            step="0.5"
+            placeholder="e.g., 1.5"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="area">Area (sq ft) <span class="required">*</span></label>
+          <input
+            type="number"
+            id="area"
+            name="area"
+            [(ngModel)]="property.area"
+            min="1"
+            placeholder="e.g., 1000"
+            required
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Address Section -->
+    <div class="form-section">
+      <h2>Property Address</h2>
+
+      <div class="form-group">
+        <label for="street"
+          >Street Address <span class="required">*</span></label
+        >
+        <input
+          type="text"
+          id="street"
+          name="street"
+          [(ngModel)]="property.address.street"
+          placeholder="e.g., 123 Main St"
+          required
+        />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="city">City <span class="required">*</span></label>
+          <input
+            type="text"
+            id="city"
+            name="city"
+            [(ngModel)]="property.address.city"
+            placeholder="e.g., New York"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="state"
+            >State/Province <span class="required">*</span></label
+          >
+          <input
+            type="text"
+            id="state"
+            name="state"
+            [(ngModel)]="property.address.state"
+            placeholder="e.g., NY"
+            required
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="zip-code"
+            >Zip/Postal Code <span class="required">*</span></label
+          >
+          <input
+            type="text"
+            id="zip-code"
+            name="zipCode"
+            [(ngModel)]="property.address.zipCode"
+            placeholder="e.g., 10001"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="country">Country <span class="required">*</span></label>
+          <input
+            type="text"
+            id="country"
+            name="country"
+            [(ngModel)]="property.address.country"
+            placeholder="e.g., United States"
+            required
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="form-section">
+      <h2>Property Features</h2>
+      <p>Select all that apply to your property</p>
+
+      <div class="features-grid">
+        <div
+          *ngFor="let feature of availableFeatures"
+          class="feature-item"
+          [class.selected]="property.features.includes(feature.value)"
+          (click)="toggleFeature(feature.value)"
+        >
+          <i class="fa {{ feature.icon }}"></i>
+          <span>{{ feature.label }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Availability Section -->
+    <div class="form-section">
+      <h2>Availability</h2>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="available-from"
+            >Available From <span class="required">*</span></label
+          >
+          <input
+            type="date"
+            id="available-from"
+            name="availableFrom"
+            [(ngModel)]="property.availability.availableFrom"
+            [min]="formatDate(today)"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="minimum-stay">Minimum Stay (months)</label>
+          <input
+            type="number"
+            id="minimum-stay"
+            name="minimumStay"
+            [(ngModel)]="property.availability.minimumStay"
+            min="1"
+            placeholder="e.g., 1"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Images Section -->
+    <div class="form-section">
+      <h2>Property Images <span class="required">*</span></h2>
+      <p>Add at least one image of your property (max 10 images)</p>
+
+      <div class="image-upload-container">
+        <label for="image-upload" class="image-upload-label">
+          <i class="fa fa-cloud-upload-alt"></i>
+          <span>Click to upload images</span>
+        </label>
+        <input
+          type="file"
+          id="image-upload"
+          accept="image/*"
+          multiple
+          (change)="onImageSelect($event)"
+          [disabled]="imagePreviews.length >= 10"
+          style="display: none"
+        />
+      </div>
+
+      <div class="image-previews" *ngIf="imagePreviews.length > 0">
+        <div
+          *ngFor="let preview of imagePreviews; let i = index"
+          class="image-preview-item"
+        >
+          <img [src]="preview" alt="Property image preview" />
+          <button type="button" class="remove-image" (click)="removeImage(i)">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="form-actions">
+      <button type="button" class="btn-cancel" [routerLink]="['/properties']">
+        Cancel
+      </button>
+      <button type="submit" class="btn-submit" [disabled]="loading">
+        <i *ngIf="loading" class="fa fa-spinner fa-spin"></i>
+        {{ loading ? "Creating..." : "Create Property" }}
+      </button>
+    </div>
+  </form>
+</div>
