@@ -150,9 +150,21 @@
             </p>
             <p>{{ property.address?.country }}</p>
           </div>
-          <!-- Map placeholder - would integrate with Google Maps or similar -->
-          <div class="map-placeholder">
-            <img src="assets/images/map-placeholder.jpg" alt="Map location" />
+          <!-- Map container for Leaflet -->
+          <div
+            id="property-map"
+            class="property-map"
+            *ngIf="property?.location?.coordinates?.length === 2"
+          ></div>
+          <!-- Fallback if no coordinates are available -->
+          <div
+            class="map-placeholder"
+            *ngIf="
+              !property?.location?.coordinates ||
+              property?.location?.coordinates?.length !== 2
+            "
+          >
+            <p>Map location not available</p>
           </div>
         </div>
 

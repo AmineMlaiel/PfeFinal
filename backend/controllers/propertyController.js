@@ -1,6 +1,8 @@
 const Property = require("../models/propertyModel");
 const Booking = require("../models/bookingModel");
 const Review = require("../models/reviewModel");
+const fs = require("fs");
+const path = require("path");
 
 // @desc    Create a new property
 // @route   POST /api/properties
@@ -269,6 +271,14 @@ exports.getMyProperties = async (req, res) => {
 // @access  Private (Owner of property or Admin)
 exports.uploadPropertyImages = async (req, res) => {
   try {
+    console.log("Upload request received");
+
+    if (!req.files) {
+      console.log("No req.files object found");
+    } else {
+      console.log(`Files object keys: ${Object.keys(req.files)}`);
+    }
+
     const property = await Property.findById(req.params.id);
 
     if (!property) {
@@ -290,6 +300,7 @@ exports.uploadPropertyImages = async (req, res) => {
     }
 
     if (!req.files || Object.keys(req.files).length === 0) {
+      console.log("No files were uploaded or req.files is empty");
       return res.status(400).json({
         success: false,
         message: "No files were uploaded",
@@ -297,7 +308,22 @@ exports.uploadPropertyImages = async (req, res) => {
     }
 
     const files = req.files.images;
+    console.log(
+      `Found ${Array.isArray(files) ? files.length : 1} file(s) to process`
+    );
     const images = [];
+
+    // Create upload directory if it doesn't exist
+    const uploadDir = process.env.UPLOAD_DIR || "uploads";
+    const propertyUploadDir = path.join(uploadDir, "properties");
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    if (!fs.existsSync(propertyUploadDir)) {
+      fs.mkdirSync(propertyUploadDir, { recursive: true });
+    }
 
     // Handle multiple or single file upload
     const filesToProcess = Array.isArray(files) ? files : [files];
@@ -327,11 +353,14 @@ exports.uploadPropertyImages = async (req, res) => {
 
       // Upload to server/cloud storage (implementation will vary)
       // This is a placeholder - actual implementation depends on your setup
-      const filePath = `${process.env.UPLOAD_DIR}/properties/${fileName}`;
+      const filePath = path.join(propertyUploadDir, fileName);
+
       await file.mv(filePath);
 
-      // Add to images array
-      images.push(fileName);
+      // Add to images array - construct URL path for easy frontend access
+      const baseUrl = process.env.BASE_URL || "http://localhost:3900";
+      const imageUrl = `${baseUrl}/${uploadDir}/properties/${fileName}`;
+      images.push(imageUrl);
     }
 
     // Add images to property

@@ -78,7 +78,7 @@ const propertySchema = new mongoose.Schema(
     images: [
       {
         type: String,
-        required: [true, "At least one image is required"],
+        required: false,
       },
     ],
     features: [

@@ -243,6 +243,9 @@ export class PropertyAddComponent implements OnInit {
             if (this.imageFiles.length > 0) {
               // Create FormData for image upload
               const formData = new FormData();
+
+              // Backend expects "images" as the field name for file uploads
+              // If multiple files, append each one with the same field name
               this.imageFiles.forEach((file) => {
                 formData.append('images', file);
               });

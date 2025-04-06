@@ -1,9 +1,17 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  Inject,
+  PLATFORM_ID,
+} from '@angular/core';
+import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { PropertyService } from '../../services/property.service';
 import { AuthService } from '../../auth/auth.service';
 import { FormsModule } from '@angular/forms';
+// Declare this as a variable to prevent direct import that would cause SSR issues
+declare const L: any;
 
 @Component({
   selector: 'app-property-details',
@@ -12,7 +20,7 @@ import { FormsModule } from '@angular/forms';
   templateUrl: './property-details.component.html',
   styleUrl: './property-details.component.scss',
 })
-export class PropertyDetailsComponent implements OnInit {
+export class PropertyDetailsComponent implements OnInit, AfterViewInit {
   propertyId: string = '';
   property: any = null;
   reviews: any[] = [];
@@ -21,7 +29,9 @@ export class PropertyDetailsComponent implements OnInit {
   isOwner: boolean = false;
   isLoggedIn: boolean = false;
   selectedImageIndex: number = 0;
-  today: Date = new Date(); // Added for template
+  today: Date = new Date();
+  private map: any = null;
+  private isBrowser: boolean;
 
   // Booking-related properties
   bookingStartDate: string = '';
@@ -39,10 +49,13 @@ export class PropertyDetailsComponent implements OnInit {
 
   constructor(
     private route: ActivatedRoute,
-    public router: Router, // Changed to public for template access
+    public router: Router,
     private propertyService: PropertyService,
-    private authService: AuthService
-  ) {}
+    private authService: AuthService,
+    @Inject(PLATFORM_ID) platformId: Object
+  ) {
+    this.isBrowser = isPlatformBrowser(platformId);
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -59,6 +72,66 @@ export class PropertyDetailsComponent implements OnInit {
     this.authService.isLoggedIn().subscribe((loggedIn) => {
       this.isLoggedIn = loggedIn;
     });
+  }
+
+  ngAfterViewInit(): void {
+    // We'll initialize the map after we have property data
+    // Map initialization is now handled in the property data load callback
+  }
+
+  // Initialize the map with property coordinates
+  initializeMap(): void {
+    // Only proceed if running in a browser environment
+    if (!this.isBrowser) {
+      return;
+    }
+
+    // Load Leaflet dynamically only in browser environment
+    import('leaflet')
+      .then((leaflet) => {
+        const L = leaflet.default;
+
+        if (
+          !this.property ||
+          !this.property.location ||
+          !this.property.location.coordinates
+        ) {
+          console.error('No location coordinates available for this property');
+          return;
+        }
+
+        // Create map container if it doesn't exist
+        const mapContainer = document.getElementById('property-map');
+        if (!mapContainer) {
+          console.error('Map container not found');
+          return;
+        }
+
+        // Extract coordinates - MongoDB stores as [longitude, latitude] but Leaflet uses [latitude, longitude]
+        const [longitude, latitude] = this.property.location.coordinates;
+
+        // Initialize the map
+        this.map = L.map('property-map').setView([latitude, longitude], 15);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors',
+        }).addTo(this.map);
+
+        // Add a marker for the property location
+        const marker = L.marker([latitude, longitude]).addTo(this.map);
+        marker
+          .bindPopup(
+            `<b>${this.property.title}</b><br>${this.property.address.street}`
+          )
+          .openPopup();
+
+        // Properly size the map container
+        this.map.invalidateSize();
+      })
+      .catch((error) => {
+        console.error('Error loading Leaflet:', error);
+      });
   }
 
   // Added method for template
@@ -105,6 +178,11 @@ export class PropertyDetailsComponent implements OnInit {
           this.bookingStartDate = this.formatDate(today);
           this.bookingEndDate = this.formatDate(tomorrow);
           this.calculateBookingDetails();
+
+          // Initialize map after data is loaded (only if in browser)
+          if (this.isBrowser) {
+            setTimeout(() => this.initializeMap(), 300);
+          }
         }
         this.loading = false;
       },

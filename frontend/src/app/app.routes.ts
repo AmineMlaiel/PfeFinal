@@ -39,7 +39,6 @@ export const routes: Routes = [
   {
     path: 'properties/:id/update',
     component: PropertyUpdateComponent,
-    canActivate: [authGuard],
   },
   { path: 'property/:id', component: PropertyDetailsComponent },
   { path: '**', redirectTo: '' },

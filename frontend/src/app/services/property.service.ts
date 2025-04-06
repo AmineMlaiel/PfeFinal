@@ -71,12 +71,36 @@ export class PropertyService {
     propertyId: string,
     formData: FormData
   ): Observable<string[]> {
+    console.log(`Uploading images for property ${propertyId}`);
+    // Log form data content
+    const formDataEntries = Array.from(formData.entries());
+    console.log(
+      'FormData contents:',
+      formDataEntries.map((entry) => {
+        if (entry[1] instanceof File) {
+          return {
+            field: entry[0],
+            filename: (entry[1] as File).name,
+            type: (entry[1] as File).type,
+          };
+        }
+        return entry;
+      })
+    );
+
     return this.http
       .post<{ success: boolean; data: string[] }>(
-        `${this.apiUrl}/${propertyId}/images/upload`,
+        `${this.apiUrl}/${propertyId}/images`,
         formData
       )
-      .pipe(map((response) => response.data));
+      .pipe(
+        tap((response) => console.log('Image upload response:', response)),
+        map((response) => response.data),
+        catchError((error) => {
+          console.error('Image upload error:', error);
+          throw error;
+        })
+      );
   }
 
   // Get nearby properties
