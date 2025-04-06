@@ -1,4 +1,9 @@
-import { ApplicationConfig, inject, isDevMode } from '@angular/core';
+import {
+  ApplicationConfig,
+  inject,
+  isDevMode,
+  importProvidersFrom,
+} from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
 import {
   provideHttpClient,
@@ -14,6 +19,8 @@ import { AuthService } from './auth/auth.service';
 import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
+import { GoogleMapsModule } from '@angular/google-maps';
+import { environment } from '../environments/environment';
 
 // Create a functional interceptor instead of using the class-based one
 const authInterceptorFn: HttpInterceptorFn = (req, next) => {
@@ -54,9 +61,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes, withComponentInputBinding()),
     provideClientHydration(),
     provideAnimations(),
-    provideHttpClient(
-      withInterceptors([authInterceptorFn]),
-      withFetch()
-    ),
+    provideHttpClient(withInterceptors([authInterceptorFn]), withFetch()),
+    importProvidersFrom(GoogleMapsModule),
   ],
 };

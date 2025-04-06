@@ -121,7 +121,7 @@
               <i class="fa fa-ruler-combined"></i>
               <div>
                 <h4>Area</h4>
-                <p>{{ property.area }} sq ft</p>
+                <p>{{ property.area }} m²</p>
               </div>
             </div>
           </div>
@@ -150,21 +150,22 @@
             </p>
             <p>{{ property.address?.country }}</p>
           </div>
-          <!-- Map container for Leaflet -->
-          <div
-            id="property-map"
-            class="property-map"
-            *ngIf="property?.location?.coordinates?.length === 2"
-          ></div>
-          <!-- Fallback if no coordinates are available -->
-          <div
-            class="map-placeholder"
-            *ngIf="
-              !property?.location?.coordinates ||
-              property?.location?.coordinates?.length !== 2
-            "
-          >
-            <p>Map location not available</p>
+
+          <!-- Google Maps container with simple div -->
+          <div id="property-map" class="property-map"></div>
+
+          <!-- Loading placeholder when map is not yet loaded -->
+          <div class="map-placeholder" *ngIf="loading && !mapLoaded">
+            <div class="spinner"></div>
+            <p>Loading map...</p>
+          </div>
+
+          <!-- Debug information about coordinates (can be removed in production) -->
+          <div class="coords-debug" *ngIf="property?.location?.coordinates">
+            <small
+              >Location coordinates:
+              {{ property?.location?.coordinates | json }}</small
+            >
           </div>
         </div>
 

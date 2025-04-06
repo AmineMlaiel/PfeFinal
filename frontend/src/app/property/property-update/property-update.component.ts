@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -45,7 +45,9 @@ const PROPERTY_TYPES = [
   templateUrl: './property-update.component.html',
   styleUrl: './property-update.component.scss',
 })
-export class PropertyUpdateComponent implements OnInit {
+export class PropertyUpdateComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   propertyId: string = '';
   loading = true;
   error: string | null = null;
@@ -56,6 +58,12 @@ export class PropertyUpdateComponent implements OnInit {
 
   propertyTypes = PROPERTY_TYPES;
   availableFeatures = PROPERTY_FEATURES;
+
+  // For map selection
+  latitude: number | null = null;
+  longitude: number | null = null;
+  private map: any = null;
+  private marker: any = null;
 
   // Property model - same structure as add component
   property!: Property;
@@ -96,11 +104,137 @@ export class PropertyUpdateComponent implements OnInit {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Map will be initialized after property data is loaded
+  }
+
+  ngOnDestroy(): void {
+    // Clean up map resources
+    if (this.map) {
+      if (typeof this.map.remove === 'function') {
+        this.map.remove();
+      } else if (this.marker) {
+        // Google Maps doesn't have a remove method, need to handle differently
+        this.marker.setMap(null);
+      }
+      this.map = null;
+      this.marker = null;
+    }
+  }
+
   formatDate(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  // Initialize the Google Map for location selection
+  private initMap(): void {
+    // Make sure Google Maps API is loaded
+    if (!window.google || !window.google.maps) {
+      console.error('Google Maps API not loaded');
+      return;
+    }
+
+    // Get the map container
+    const mapElement = document.getElementById('location-select-map');
+    if (!mapElement) {
+      console.error('Map container not found');
+      return;
+    }
+
+    // Initial coordinates - use existing property coordinates if available
+    let initialLat = 40.7128; // Default to New York
+    let initialLng = -74.006;
+
+    if (
+      this.property.location &&
+      this.property.location.coordinates &&
+      this.property.location.coordinates.length === 2
+    ) {
+      // MongoDB stores as [longitude, latitude]
+      initialLng = this.property.location.coordinates[0];
+      initialLat = this.property.location.coordinates[1];
+
+      // Also set our form values
+      this.longitude = initialLng;
+      this.latitude = initialLat;
+    }
+
+    // Set up the map
+    this.map = new google.maps.Map(mapElement, {
+      center: { lat: initialLat, lng: initialLng },
+      zoom: 14,
+      mapTypeControl: true,
+      streetViewControl: true,
+      fullscreenControl: true,
+    });
+
+    // Create initial marker with existing coordinates
+    this.setMapMarker(initialLat, initialLng);
+
+    // Add click listener to the map to allow changing the location
+    this.map.addListener('click', (event: any) => {
+      const clickedLat = event.latLng.lat();
+      const clickedLng = event.latLng.lng();
+      this.setMapMarker(clickedLat, clickedLng);
+    });
+  }
+
+  // Set or update the marker on the map
+  private setMapMarker(lat: number, lng: number): void {
+    // Update our form values
+    this.latitude = lat;
+    this.longitude = lng;
+
+    // Update property coordinates (MongoDB format is [longitude, latitude])
+    if (this.property && this.property.location) {
+      this.property.location.coordinates = [lng, lat];
+    }
+
+    // Remove existing marker if any
+    if (this.marker) {
+      this.marker.setMap(null);
+    }
+
+    // Create a new marker
+    this.marker = new google.maps.Marker({
+      position: { lat, lng },
+      map: this.map,
+      draggable: true, // Allow users to fine-tune the position
+      animation: google.maps.Animation.DROP,
+    });
+
+    // Add drag end listener to update coordinates when marker is moved
+    this.marker.addListener('dragend', () => {
+      const position = this.marker.getPosition();
+      if (position) {
+        this.latitude = position.lat();
+        this.longitude = position.lng();
+        if (this.property && this.property.location) {
+          this.property.location.coordinates = [
+            this.longitude!,
+            this.latitude!,
+          ];
+        }
+      }
+    });
+
+    console.log('Selected coordinates:', [lng, lat]);
+  }
+
+  // Update coordinates from map selection
+  updateCoordinates(): void {
+    if (
+      this.longitude !== null &&
+      this.latitude !== null &&
+      this.property.location
+    ) {
+      // MongoDB stores coordinates as [longitude, latitude]
+      this.property.location.coordinates = [this.longitude, this.latitude];
+      console.log('Coordinates updated:', this.property.location.coordinates);
+    }
   }
 
   loadPropertyData(): void {
@@ -128,6 +262,19 @@ export class PropertyUpdateComponent implements OnInit {
                 this.property.availability.availableFrom
               );
             }
+
+            // Extract latitude and longitude for the map
+            if (
+              this.property.location &&
+              this.property.location.coordinates &&
+              this.property.location.coordinates.length === 2
+            ) {
+              this.longitude = this.property.location.coordinates[0];
+              this.latitude = this.property.location.coordinates[1];
+            }
+
+            // Initialize map after property data is loaded
+            setTimeout(() => this.initMap(), 500);
           } else {
             // Not authorized
             this.notAuthorized = true;
@@ -276,121 +423,81 @@ export class PropertyUpdateComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    // Get coordinates from address
-    this.getCoordinatesFromAddress()
-      .then(() => {
-        // Clone the property to avoid any reference issues
-        const updatedProperty = { ...this.property };
+    // Use manually entered coordinates if available
+    if (this.latitude !== null && this.longitude !== null) {
+      this.updateCoordinates();
+      if (this.property.location && this.property.location.coordinates) {
+        console.log(
+          'Using manually entered coordinates:',
+          this.property.location.coordinates
+        );
+      }
+    } else {
+      console.log('No manual coordinates provided, using existing coordinates');
+    }
 
-        // Update existing images in property data
-        updatedProperty.images = [...this.existingImages];
+    // First delete any images that need to be removed
+    const updateProperty = () => {
+      // Clone the property to avoid any reference issues
+      const updatedProperty = { ...this.property };
 
-        // Handle property update with potential new images
-        const updateWithImages = () => {
-          if (this.imageFiles.length > 0) {
-            // If there are new images, upload them first
-            const formData = new FormData();
-            this.imageFiles.forEach((file) => {
-              formData.append('images', file);
-            });
+      // Update existing images in property data
+      updatedProperty.images = [...this.existingImages];
 
-            this.propertyService
-              .uploadPropertyImages(this.propertyId, formData)
-              .subscribe(
-                (imageUrls) => {
-                  // Combine existing and new images
-                  updatedProperty.images = [
-                    ...updatedProperty.images,
-                    ...imageUrls,
-                  ];
+      // Handle property update with potential new images
+      const updateWithImages = () => {
+        if (this.imageFiles.length > 0) {
+          // If there are new images, upload them first
+          const formData = new FormData();
+          this.imageFiles.forEach((file) => {
+            formData.append('images', file);
+          });
 
-                  // Now update the property data
-                  this.propertyService
-                    .updateProperty(this.propertyId, updatedProperty)
-                    .subscribe(
-                      () => this.handleSuccess(),
-                      (error) => this.handleError(error)
-                    );
-                },
-                (error) => this.handleError(error)
-              );
-          } else {
-            // No new images to upload, just update property data
-            this.propertyService
-              .updateProperty(this.propertyId, updatedProperty)
-              .subscribe(
-                () => this.handleSuccess(),
-                (error) => this.handleError(error)
-              );
-          }
-        };
-
-        // Process any images to delete
-        if (this.imagesToDelete.length > 0) {
           this.propertyService
-            .deletePropertyImages(this.propertyId, this.imagesToDelete)
+            .uploadPropertyImages(this.propertyId, formData)
             .subscribe(
-              () => updateWithImages(),
+              (imageUrls) => {
+                // Combine existing and new images
+                updatedProperty.images = [
+                  ...updatedProperty.images,
+                  ...imageUrls,
+                ];
+
+                // Now update the property data
+                this.propertyService
+                  .updateProperty(this.propertyId, updatedProperty)
+                  .subscribe(
+                    () => this.handleSuccess(),
+                    (error) => this.handleError(error)
+                  );
+              },
               (error) => this.handleError(error)
             );
         } else {
-          updateWithImages();
+          // No new images to upload, just update property data
+          this.propertyService
+            .updateProperty(this.propertyId, updatedProperty)
+            .subscribe(
+              () => this.handleSuccess(),
+              (error) => this.handleError(error)
+            );
         }
-      })
-      .catch((error) => {
-        console.error('Error geocoding address:', error);
-        this.error =
-          'Failed to geocode address. Please verify your address is correct.';
-        this.loading = false;
-      });
-  }
+      };
 
-  // Get coordinates from address using Nominatim API (OpenStreetMap)
-  async getCoordinatesFromAddress(): Promise<void> {
-    const { street, city, state, zipCode, country } = this.property.address;
-    const addressString = `${street}, ${city}, ${state}, ${zipCode}, ${country}`;
-
-    try {
-      // Encode the address for URL
-      const encodedAddress = encodeURIComponent(addressString);
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to geocode address');
-      }
-
-      const data = await response.json();
-
-      if (data && data.length > 0) {
-        // Nominatim returns [lat, lon] but MongoDB expects [lon, lat]
-        // Ensure location object exists
-        if (!this.property.location) {
-          this.property.location = { coordinates: [0, 0] };
-        }
-
-        this.property.location.coordinates = [
-          parseFloat(data[0].lon),
-          parseFloat(data[0].lat),
-        ];
+      // Process any images to delete
+      if (this.imagesToDelete.length > 0) {
+        this.propertyService
+          .deletePropertyImages(this.propertyId, this.imagesToDelete)
+          .subscribe(
+            () => updateWithImages(),
+            (error) => this.handleError(error)
+          );
       } else {
-        // If no results found, use default coordinates
-        if (!this.property.location) {
-          this.property.location = { coordinates: [0, 0] };
-        } else {
-          this.property.location.coordinates = [0, 0];
-        }
+        updateWithImages();
       }
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      // If error, use default coordinates
-      if (!this.property.location) {
-        this.property.location = { coordinates: [0, 0] };
-      } else {
-        this.property.location.coordinates = [0, 0];
-      }
-    }
+    };
+
+    updateProperty();
   }
 
   private handleSuccess(): void {

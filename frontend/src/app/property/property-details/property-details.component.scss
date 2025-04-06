@@ -742,6 +742,7 @@
   margin-top: 1rem;
   overflow: hidden;
   z-index: 1;
+  position: relative;
 }
 
 .map-placeholder {
@@ -751,8 +752,33 @@
   border-radius: 8px;
   margin-top: 1rem;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   color: #666;
   font-style: italic;
+
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(0, 123, 255, 0.2);
+    border-left-color: #007bff;
+    border-radius: 50%;
+    margin-bottom: 15px;
+    animation: spin 1s linear infinite;
+  }
+
+  p {
+    margin-top: 10px;
+  }
+}
+
+.coords-debug {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+  background-color: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
 }

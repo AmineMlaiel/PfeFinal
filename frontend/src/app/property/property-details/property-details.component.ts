@@ -2,25 +2,58 @@ import {
   Component,
   OnInit,
   AfterViewInit,
+  OnDestroy,
   Inject,
   PLATFORM_ID,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { CommonModule, DatePipe, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { PropertyService } from '../../services/property.service';
 import { AuthService } from '../../auth/auth.service';
 import { FormsModule } from '@angular/forms';
-// Declare this as a variable to prevent direct import that would cause SSR issues
-declare const L: any;
+import { GoogleMapsModule } from '@angular/google-maps';
+
+// Interface for Google Maps options
+interface MapOptions {
+  center: { lat: number; lng: number };
+  zoom: number;
+  mapTypeId: string;
+  mapTypeControl: boolean;
+  streetViewControl: boolean;
+  fullscreenControl: boolean;
+}
+
+// Interface for Marker position
+interface MarkerPosition {
+  lat: number;
+  lng: number;
+}
+
+// Interface for Marker options
+interface MarkerOptions {
+  draggable: boolean;
+}
 
 @Component({
   selector: 'app-property-details',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, DatePipe],
+  imports: [
+    CommonModule,
+    RouterModule,
+    FormsModule,
+    DatePipe,
+    GoogleMapsModule,
+  ],
   templateUrl: './property-details.component.html',
   styleUrl: './property-details.component.scss',
 })
-export class PropertyDetailsComponent implements OnInit, AfterViewInit {
+export class PropertyDetailsComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
+  @ViewChild('mapDiv') mapElement: ElementRef | undefined;
+
   propertyId: string = '';
   property: any = null;
   reviews: any[] = [];
@@ -30,8 +63,22 @@ export class PropertyDetailsComponent implements OnInit, AfterViewInit {
   isLoggedIn: boolean = false;
   selectedImageIndex: number = 0;
   today: Date = new Date();
-  private map: any = null;
-  private isBrowser: boolean;
+  private isBrowser: boolean = false;
+  private map: any = null; // Will hold the Google Map instance
+  private marker: any = null; // Will hold the marker
+
+  // Google Maps properties
+  mapOptions: MapOptions = {
+    center: { lat: 40.7128, lng: -74.006 }, // Default New York City
+    zoom: 15,
+    mapTypeId: 'roadmap',
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+  };
+  markerPosition: MarkerPosition = { lat: 40.7128, lng: -74.006 };
+  markerOptions: MarkerOptions = { draggable: false };
+  mapLoaded = false;
 
   // Booking-related properties
   bookingStartDate: string = '';
@@ -75,63 +122,132 @@ export class PropertyDetailsComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // We'll initialize the map after we have property data
-    // Map initialization is now handled in the property data load callback
+    // We'll initialize the map in the callback when data is loaded
   }
 
-  // Initialize the map with property coordinates
+  ngOnDestroy(): void {
+    // Cleanup
+    this.map = null;
+    this.marker = null;
+  }
+
+  // Initialize the map with property coordinates using the newer Google Maps JS API
   initializeMap(): void {
-    // Only proceed if running in a browser environment
-    if (!this.isBrowser) {
+    if (!this.isBrowser || !window.google || !window.google.maps) {
+      console.error('Google Maps not available');
       return;
     }
 
-    // Load Leaflet dynamically only in browser environment
-    import('leaflet')
-      .then((leaflet) => {
-        const L = leaflet.default;
+    // Get coordinates
+    let latitude = 40.7128; // Default New York City
+    let longitude = -74.006;
 
-        if (
-          !this.property ||
-          !this.property.location ||
-          !this.property.location.coordinates
-        ) {
-          console.error('No location coordinates available for this property');
-          return;
+    // Check the structure of location data and extract coordinates correctly
+    if (this.property?.location) {
+      if (
+        this.property.location.coordinates &&
+        Array.isArray(this.property.location.coordinates)
+      ) {
+        // MongoDB GeoJSON format: [longitude, latitude]
+        if (this.property.location.coordinates.length === 2) {
+          longitude = this.property.location.coordinates[0];
+          latitude = this.property.location.coordinates[1];
+          console.log(
+            'Using coordinates from location.coordinates array:',
+            longitude,
+            latitude
+          );
         }
+      } else if (
+        this.property.location.latitude !== undefined &&
+        this.property.location.longitude !== undefined
+      ) {
+        // Direct lat/lng properties
+        latitude = this.property.location.latitude;
+        longitude = this.property.location.longitude;
+        console.log('Using direct lat/lng properties:', latitude, longitude);
+      }
+    } else if (
+      this.property?.latitude !== undefined &&
+      this.property?.longitude !== undefined
+    ) {
+      // Some APIs store coordinates at the root level
+      latitude = this.property.latitude;
+      longitude = this.property.longitude;
+      console.log('Using root-level coordinates:', latitude, longitude);
+    }
 
-        // Create map container if it doesn't exist
-        const mapContainer = document.getElementById('property-map');
-        if (!mapContainer) {
-          console.error('Map container not found');
-          return;
-        }
+    console.log('Final coordinates being used for map:', latitude, longitude);
 
-        // Extract coordinates - MongoDB stores as [longitude, latitude] but Leaflet uses [latitude, longitude]
-        const [longitude, latitude] = this.property.location.coordinates;
+    // Update marker position and map options
+    this.markerPosition = { lat: latitude, lng: longitude };
+    this.mapOptions = {
+      ...this.mapOptions,
+      center: { lat: latitude, lng: longitude },
+    };
 
-        // Initialize the map
-        this.map = L.map('property-map').setView([latitude, longitude], 15);
+    // Initialize the map
+    const mapDiv = document.getElementById('property-map');
+    if (!mapDiv) {
+      console.error('Map container not found');
+      return;
+    }
 
-        // Add OpenStreetMap tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors',
-        }).addTo(this.map);
-
-        // Add a marker for the property location
-        const marker = L.marker([latitude, longitude]).addTo(this.map);
-        marker
-          .bindPopup(
-            `<b>${this.property.title}</b><br>${this.property.address.street}`
-          )
-          .openPopup();
-
-        // Properly size the map container
-        this.map.invalidateSize();
-      })
-      .catch((error) => {
-        console.error('Error loading Leaflet:', error);
+    try {
+      // Create the map
+      this.map = new google.maps.Map(mapDiv, {
+        center: { lat: latitude, lng: longitude },
+        zoom: 15,
+        mapTypeControl: false,
+        streetViewControl: true,
+        fullscreenControl: true,
       });
+
+      // Create an info window for the marker
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<div><strong>${
+          this.property.title || 'Property'
+        }</strong><br>${this.property.address?.street || ''}</div>`,
+      });
+
+      // Check if we can use the newer AdvancedMarkerElement
+      if (google.maps.marker && google.maps.marker.AdvancedMarkerElement) {
+        // Use the newer AdvancedMarkerElement
+        this.marker = new google.maps.marker.AdvancedMarkerElement({
+          map: this.map,
+          position: { lat: latitude, lng: longitude },
+          title: this.property.title || 'Property Location',
+        });
+
+        // Add a click listener to show info
+        this.marker.addListener('click', () => {
+          const advancedMarkerPosition = this.marker.position;
+          const position = {
+            lat: advancedMarkerPosition.lat,
+            lng: advancedMarkerPosition.lng,
+          };
+          infoWindow.setPosition(position);
+          infoWindow.open(this.map);
+        });
+      } else {
+        // Fall back to the old Marker
+        this.marker = new google.maps.Marker({
+          position: { lat: latitude, lng: longitude },
+          map: this.map,
+          title: this.property.title || 'Property Location',
+        });
+
+        // Add a click listener to show info
+        this.marker.addListener('click', () => {
+          infoWindow.open(this.map, this.marker);
+        });
+      }
+
+      // Set the map as loaded
+      this.mapLoaded = true;
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
   }
 
   // Added method for template
@@ -179,7 +295,7 @@ export class PropertyDetailsComponent implements OnInit, AfterViewInit {
           this.bookingEndDate = this.formatDate(tomorrow);
           this.calculateBookingDetails();
 
-          // Initialize map after data is loaded (only if in browser)
+          // Initialize map after data is loaded
           if (this.isBrowser) {
             setTimeout(() => this.initializeMap(), 300);
           }
