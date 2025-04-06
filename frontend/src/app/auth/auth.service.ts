@@ -35,6 +35,14 @@ export class AuthService {
 
   // Get HTTP headers with auth token for API requests
   getHttpHeaders(): HttpHeaders {
+    // Check if running in browser environment before accessing localStorage
+    if (typeof window === 'undefined') {
+      // Return default headers if in SSR environment
+      return new HttpHeaders({
+        'Content-Type': 'application/json',
+      });
+    }
+
     const token = localStorage.getItem('token');
     return new HttpHeaders({
       'Content-Type': 'application/json',
@@ -209,5 +217,10 @@ export class AuthService {
     }
 
     return throwError(() => error);
+  }
+
+  // Get the current user synchronously
+  getUser(): any {
+    return this.getUserData();
   }
 }

@@ -20,7 +20,6 @@ import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 import { isPlatformBrowser } from '@angular/common';
 import { GoogleMapsModule } from '@angular/google-maps';
-import { environment } from '../environments/environment';
 
 // Create a functional interceptor instead of using the class-based one
 const authInterceptorFn: HttpInterceptorFn = (req, next) => {

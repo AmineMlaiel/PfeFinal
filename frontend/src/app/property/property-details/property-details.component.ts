@@ -14,6 +14,7 @@ import { PropertyService } from '../../services/property.service';
 import { AuthService } from '../../auth/auth.service';
 import { FormsModule } from '@angular/forms';
 import { GoogleMapsModule } from '@angular/google-maps';
+import { BookingFormComponent } from '../../booking/booking-form/booking-form.component';
 
 // Interface for Google Maps options
 interface MapOptions {
@@ -45,6 +46,7 @@ interface MarkerOptions {
     FormsModule,
     DatePipe,
     GoogleMapsModule,
+    BookingFormComponent,
   ],
   templateUrl: './property-details.component.html',
   styleUrl: './property-details.component.scss',

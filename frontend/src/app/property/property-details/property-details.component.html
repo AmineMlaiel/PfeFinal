@@ -159,8 +159,6 @@
             <div class="spinner"></div>
             <p>Loading map...</p>
           </div>
-
-         
         </div>
 
         <!-- Property reviews section -->
@@ -265,67 +263,11 @@
       </div>
 
       <!-- Booking card section -->
-      <div class="booking-card" *ngIf="!isOwner">
-        <div class="booking-card-header">
-          <div class="booking-price">
-            <span class="price">DT{{ property.price }}</span>
-            <span class="night">/ night</span>
-          </div>
-          <div class="booking-rating">
-            <i class="fa fa-star filled"></i>
-            <span
-              >{{ property.rating.toFixed(1) }} ({{
-                property.reviewCount || 0
-              }})</span
-            >
-          </div>
-        </div>
-
-        <div class="booking-form">
-          <div class="date-inputs">
-            <div class="form-group">
-              <label for="check-in">Check-in</label>
-              <input
-                type="date"
-                id="check-in"
-                [(ngModel)]="bookingStartDate"
-                (change)="calculateBookingDetails()"
-                [min]="formatDate(today)"
-              />
-            </div>
-            <div class="form-group">
-              <label for="check-out">Check-out</label>
-              <input
-                type="date"
-                id="check-out"
-                [(ngModel)]="bookingEndDate"
-                (change)="calculateBookingDetails()"
-                [min]="bookingStartDate"
-              />
-            </div>
-          </div>
-
-          <div class="booking-error" *ngIf="bookingError">
-            {{ bookingError }}
-          </div>
-
-          <div class="booking-details" *ngIf="bookingDuration > 0">
-            <div class="booking-detail-item">
-              <span>DT{{ property.price }} x {{ bookingDuration }} nights</span>
-              <span>DT{{ bookingTotal }}</span>
-            </div>
-            <div class="booking-total">
-              <span>Total</span>
-              <span>DT{{ bookingTotal }}</span>
-            </div>
-          </div>
-
-          <button (click)="bookProperty()" class="btn-book">Book Now</button>
-
-          <div class="booking-note">
-            <p>You won't be charged yet</p>
-          </div>
-        </div>
+      <div
+        class="booking-card"
+        *ngIf="!isOwner && property?.availability?.isAvailable"
+      >
+        <app-booking-form [property]="property"></app-booking-form>
       </div>
     </div>
   </div>

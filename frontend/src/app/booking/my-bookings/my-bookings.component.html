@@ -1,0 +1,193 @@
+<div class="my-bookings-container">
+  <header class="page-header">
+    <div class="header-content">
+      <h1>My Bookings</h1>
+      <p>Manage and track all your property reservations</p>
+    </div>
+  </header>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    <button
+      [class.active]="activeFilter === 'all'"
+      (click)="applyFilter('all')"
+    >
+      All Bookings
+    </button>
+    <button
+      [class.active]="activeFilter === 'upcoming'"
+      (click)="applyFilter('upcoming')"
+    >
+      Upcoming
+    </button>
+    <button
+      [class.active]="activeFilter === 'past'"
+      (click)="applyFilter('past')"
+    >
+      Past
+    </button>
+    <button
+      [class.active]="activeFilter === 'cancelled'"
+      (click)="applyFilter('cancelled')"
+    >
+      Cancelled
+    </button>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading your bookings...</p>
+  </div>
+
+  <!-- Error state -->
+  <div *ngIf="error && !loading" class="error-container">
+    <div class="error-message">
+      <i class="fa fa-exclamation-circle"></i>
+      <p>{{ error }}</p>
+    </div>
+
+    <!-- Show login button only if user isn't logged in -->
+    <ng-container *ngIf="!isUserLoggedIn">
+      <a
+        routerLink="/login"
+        [queryParams]="{ returnUrl: '/my-bookings' }"
+        class="btn-primary"
+      >
+        <i class="fa fa-sign-in-alt"></i> Log In
+      </a>
+    </ng-container>
+
+    <!-- Show retry button only if user is logged in -->
+    <button *ngIf="isUserLoggedIn" (click)="loadBookings()" class="btn-retry">
+      <i class="fa fa-sync"></i> Try Again
+    </button>
+  </div>
+
+  <!-- Empty state -->
+  <div
+    *ngIf="!loading && !error && bookings.length === 0"
+    class="empty-container"
+  >
+    <div class="empty-state">
+      <i class="fa fa-calendar"></i>
+      <h2>No Bookings Found</h2>
+      <p>You haven't made any bookings yet.</p>
+      <a routerLink="/properties" class="btn-primary">
+        <i class="fa fa-search"></i> Browse Properties
+      </a>
+    </div>
+  </div>
+
+  <!-- Empty filter state -->
+  <div
+    *ngIf="
+      !loading && !error && bookings.length > 0 && filteredBookings.length === 0
+    "
+    class="empty-container"
+  >
+    <div class="empty-state">
+      <i class="fa fa-filter"></i>
+      <h2>No Bookings Match Filter</h2>
+      <p *ngIf="activeFilter === 'upcoming'">
+        You don't have any upcoming bookings.
+      </p>
+      <p *ngIf="activeFilter === 'past'">You don't have any past bookings.</p>
+      <p *ngIf="activeFilter === 'cancelled'">
+        You don't have any cancelled bookings.
+      </p>
+      <button (click)="applyFilter('all')" class="btn-primary">
+        <i class="fa fa-list"></i> View All Bookings
+      </button>
+    </div>
+  </div>
+
+  <!-- Bookings list -->
+  <div
+    *ngIf="!loading && !error && filteredBookings.length > 0"
+    class="bookings-list"
+  >
+    <div class="booking-card" *ngFor="let booking of filteredBookings">
+      <!-- Property image -->
+      <div class="booking-image">
+        <img
+          [src]="
+            booking.property?.images && booking.property!.images.length > 0
+              ? booking.property!.images[0]
+              : 'assets/images/property-placeholder.jpg'
+          "
+          [alt]="booking.property?.title || 'Property'"
+          class="property-img"
+        />
+        <div class="status-badge" [ngClass]="getStatusClass(booking.status)">
+          {{ booking.status | titlecase }}
+        </div>
+      </div>
+
+      <!-- Booking details -->
+      <div class="booking-details">
+        <h3 class="property-title">
+          {{ booking.property?.title || "Property" }}
+        </h3>
+
+        <p class="property-location" *ngIf="booking.property?.address">
+          <i class="fa fa-map-marker-alt"></i>
+          {{ booking.property!.address.city }},
+          {{ booking.property!.address.state }}
+        </p>
+
+        <div class="booking-dates">
+          <div class="date-item">
+            <span class="date-label">Check-in:</span>
+            <span class="date-value">{{ formatDate(booking.checkIn) }}</span>
+          </div>
+          <div class="date-item">
+            <span class="date-label">Check-out:</span>
+            <span class="date-value">{{ formatDate(booking.checkOut) }}</span>
+          </div>
+          <div class="date-item">
+            <span class="date-label">Duration:</span>
+            <span class="date-value"
+              >{{
+                calculateNights(booking.checkIn, booking.checkOut)
+              }}
+              nights</span
+            >
+          </div>
+        </div>
+
+        <div class="guest-info">
+          <span class="guest-count">
+            <i class="fa fa-users"></i>
+            {{ booking.guests.adults }}
+            {{ booking.guests.adults === 1 ? "adult" : "adults" }}
+            <ng-container *ngIf="booking.guests.children > 0">
+              , {{ booking.guests.children }}
+              {{ booking.guests.children === 1 ? "child" : "children" }}
+            </ng-container>
+          </span>
+        </div>
+
+        <div class="booking-price">
+          <span class="price-label">Total Price:</span>
+          <span class="price-value">{{ booking.totalPrice | currency }}</span>
+        </div>
+      </div>
+
+      <!-- Booking actions -->
+      <div class="booking-actions">
+        <a [routerLink]="['/properties', booking.propertyId]" class="btn-view">
+          <i class="fa fa-eye"></i> View Property
+        </a>
+
+        <button
+          *ngIf="canCancelBooking(booking)"
+          (click)="cancelBooking(booking._id || '')"
+          class="btn-cancel"
+        >
+          <i class="fa fa-times"></i> Cancel Booking
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

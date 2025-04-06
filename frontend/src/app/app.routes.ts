@@ -16,6 +16,7 @@ import { PropertyDetailsComponent } from './property/property-details/property-d
 import { PropertyAddComponent } from './property/property-add/property-add.component';
 import { PropertyUpdateComponent } from './property/property-update/property-update.component';
 import { MyPropertiesComponent } from './property/my-properties/my-properties.component';
+import { MyBookingsComponent } from './booking/my-bookings/my-bookings.component';
 
 // Auth Guard
 export const authGuard = () => {
@@ -54,6 +55,11 @@ export const routes: Routes = [
   {
     path: 'properties/my-properties',
     component: MyPropertiesComponent,
+    canActivate: [authGuard],
+  },
+  {
+    path: 'my-bookings',
+    component: MyBookingsComponent,
     canActivate: [authGuard],
   },
   { path: 'properties/:id', component: PropertyDetailsComponent },

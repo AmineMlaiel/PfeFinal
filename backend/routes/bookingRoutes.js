@@ -1,21 +1,32 @@
 const express = require("express");
-const router = express.Router();
-const bookingController = require("../controllers/bookingController");
+const {
+  createBooking,
+  getBookings,
+  getBooking,
+  updateBookingStatus,
+  addBookingMessage,
+  getMyBookings,
+  getPropertyBookings,
+  getBookingCalendar,
+  checkAvailability,
+  calculateBookingPrice,
+} = require("../controllers/bookingController");
 const { protect, admin } = require("../middleware/authMiddleware");
 
+const router = express.Router();
+
 // Public routes
-router.get("/calendar/:propertyId", bookingController.getBookingCalendar);
+router.get("/calendar/:propertyId", getBookingCalendar);
+router.post("/check-availability", checkAvailability);
+router.post("/calculate", calculateBookingPrice);
 
-// Protected routes - require authentication
-router.use(protect);
+// Protected routes (require authentication)
+router.post("/", protect, createBooking);
+router.get("/", protect, admin, getBookings);
+router.get("/my-bookings", protect, getMyBookings);
+router.get("/property/:propertyId", protect, getPropertyBookings);
+router.get("/:id", protect, getBooking);
+router.put("/:id/status", protect, updateBookingStatus);
+router.post("/:id/messages", protect, addBookingMessage);
 
-// User routes (tenants and landlords)
-router.post("/", bookingController.createBooking);
-router.get("/my-bookings", bookingController.getMyBookings);
-router.get("/property/:propertyId", bookingController.getPropertyBookings);
-router.get("/", bookingController.getBookings);
-router.get("/:id", bookingController.getBooking);
-router.put("/:id/status", bookingController.updateBookingStatus);
-router.post("/:id/messages", bookingController.addBookingMessage);
-
-module.exports = router; 
+module.exports = router;

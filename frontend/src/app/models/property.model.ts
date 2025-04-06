@@ -38,4 +38,7 @@ export interface Property {
     email?: string;
     avatar?: string;
   };
+  cleaningFee?: number;
+  additionalGuestFee?: number;
+  baseGuests?: number;
 }
