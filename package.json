@@ -1,0 +1,16 @@
+{
+  "name": "pfetest",
+  "version": "1.0.0",
+  "description": "git clone https://github.com/AmineMlaiel/PfeFinal",
+  "main": "index.js",
+  "scripts": {
+    "start": "concurrently \"cd backend && nodemon\" \"cd frontend && ng s \"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
