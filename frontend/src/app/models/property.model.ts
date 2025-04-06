@@ -30,6 +30,8 @@ export interface Property {
   isBookmarked?: boolean;
   isApproved?: boolean;
   isActive?: boolean;
+  status?: 'pending' | 'approved' | 'rejected';
+  rejectionReason?: string;
   host?: {
     _id: string;
     name?: string;

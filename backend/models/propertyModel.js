@@ -150,6 +150,15 @@ const propertySchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+    },
   },
   {
     timestamps: true,

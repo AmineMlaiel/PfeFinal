@@ -17,7 +17,7 @@ export class MyPropertiesComponent implements OnInit {
   filteredProperties: Property[] = [];
   loading = true;
   error: string | null = null;
-  activeFilter: 'all' | 'pending' | 'approved' = 'all';
+  activeFilter: 'all' | 'pending' | 'approved' | 'rejected' = 'all';
 
   constructor(
     private propertyService: PropertyService,
@@ -57,24 +57,53 @@ export class MyPropertiesComponent implements OnInit {
     });
   }
 
-  applyFilter(filter: 'all' | 'pending' | 'approved'): void {
+  applyFilter(filter: 'all' | 'pending' | 'approved' | 'rejected'): void {
     this.activeFilter = filter;
+
+    console.log('Applying filter:', filter);
+    console.log('Properties before filtering:', this.properties.length);
 
     switch (filter) {
       case 'all':
         this.filteredProperties = [...this.properties];
         break;
       case 'pending':
-        this.filteredProperties = this.properties.filter(
-          (p) => p.isApproved === false
-        );
+        // Check explicitly for pending status or missing status with isApproved=false
+        this.filteredProperties = this.properties.filter((p) => {
+          const isPending =
+            p.status === 'pending' ||
+            (p.status === undefined && p.isApproved === false);
+          console.log(
+            `Property ${p._id}: status=${p.status}, isApproved=${p.isApproved}, isPending=${isPending}`
+          );
+          return isPending;
+        });
         break;
       case 'approved':
-        this.filteredProperties = this.properties.filter(
-          (p) => p.isApproved === true
-        );
+        // Check explicitly for approved status or missing status with isApproved=true
+        this.filteredProperties = this.properties.filter((p) => {
+          const isApproved =
+            p.status === 'approved' ||
+            (p.status === undefined && p.isApproved === true);
+          console.log(
+            `Property ${p._id}: status=${p.status}, isApproved=${p.isApproved}, isApproved=${isApproved}`
+          );
+          return isApproved;
+        });
+        break;
+      case 'rejected':
+        // Only explicitly rejected properties
+        this.filteredProperties = this.properties.filter((p) => {
+          const isRejected = p.status === 'rejected';
+          console.log(
+            `Property ${p._id}: status=${p.status}, isRejected=${isRejected}`
+          );
+          return isRejected;
+        });
         break;
     }
+
+    console.log('Filtered properties count:', this.filteredProperties.length);
   }
 
   deleteProperty(propertyId: string): void {
@@ -109,7 +138,12 @@ export class MyPropertiesComponent implements OnInit {
 
   // Helper method to get property status badge class
   getStatusBadgeClass(property: any): string {
-    if (!property.isApproved) {
+    if (property.status === 'rejected') {
+      return 'badge-rejected';
+    } else if (
+      !property.isApproved &&
+      (!property.status || property.status === 'pending')
+    ) {
       return 'badge-pending';
     } else if (!property.isActive) {
       return 'badge-inactive';
@@ -122,7 +156,12 @@ export class MyPropertiesComponent implements OnInit {
 
   // Helper method to get property status text
   getStatusText(property: any): string {
-    if (!property.isApproved) {
+    if (property.status === 'rejected') {
+      return 'Rejected';
+    } else if (
+      !property.isApproved &&
+      (!property.status || property.status === 'pending')
+    ) {
       return 'Pending Approval';
     } else if (!property.isActive) {
       return 'Inactive';
@@ -145,10 +184,22 @@ export class MyPropertiesComponent implements OnInit {
 
   // Get counts for badges
   getPendingCount(): number {
-    return this.properties.filter((p) => !p.isApproved).length;
+    return this.properties.filter(
+      (p) =>
+        p.status === 'pending' ||
+        (p.status === undefined && p.isApproved === false)
+    ).length;
   }
 
   getApprovedCount(): number {
-    return this.properties.filter((p) => p.isApproved).length;
+    return this.properties.filter(
+      (p) =>
+        p.status === 'approved' ||
+        (p.status === undefined && p.isApproved === true)
+    ).length;
+  }
+
+  getRejectedCount(): number {
+    return this.properties.filter((p) => p.status === 'rejected').length;
   }
 }

@@ -31,6 +31,12 @@
     >
       Approved ({{ getApprovedCount() }})
     </button>
+    <button
+      [class.active]="activeFilter === 'rejected'"
+      (click)="applyFilter('rejected')"
+    >
+      Rejected ({{ getRejectedCount() }})
+    </button>
   </div>
 
   <!-- Loading state -->
@@ -106,21 +112,27 @@
         users yet
       </p>
     </div> -->
-
+    <!-- 
     <div
       *ngIf="activeFilter === 'approved'"
       class="section-header approved-section"
     >
       <h2><i class="fa fa-check-circle"></i> Approved Properties</h2>
       <p>These properties are approved and visible to potential renters</p>
-    </div>
+    </div> -->
 
     <!-- Display filtered properties -->
     <div
       class="property-card"
       *ngFor="let property of filteredProperties"
-      [class.pending-property]="!property.isApproved"
-      [class.approved-property]="property.isApproved"
+      [class.pending-property]="
+        !property.isApproved && property.status !== 'rejected'
+      "
+      [class.approved-property]="
+        (property.isApproved && !property.status) ||
+        property.status === 'approved'
+      "
+      [class.rejected-property]="property.status === 'rejected'"
     >
       <div class="property-image">
         <img
@@ -151,6 +163,12 @@
             Your property is awaiting admin approval. It will not be visible to
             renters until approved.
           </p>
+        </div>
+
+        <!-- Add this after the approval-note div in the property card -->
+        <div class="rejection-info" *ngIf="property.status === 'rejected'">
+          <h4 class="rejection-title">Rejection Reason:</h4>
+          <p class="rejection-reason">{{ property.rejectionReason }}</p>
         </div>
 
         <!-- Property details -->

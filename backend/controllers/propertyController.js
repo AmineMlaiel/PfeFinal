@@ -394,7 +394,7 @@ exports.uploadPropertyImages = async (req, res) => {
 // @access  Private (Admin only)
 exports.approveProperty = async (req, res) => {
   try {
-    const { approved } = req.body;
+    const { approved, rejectionReason } = req.body;
 
     if (typeof approved !== "boolean") {
       return res.status(400).json({
@@ -403,9 +403,20 @@ exports.approveProperty = async (req, res) => {
       });
     }
 
+    // Prepare update data
+    const updateData = {
+      isApproved: approved,
+      status: approved ? "approved" : "rejected",
+    };
+
+    // If rejecting, add rejection reason
+    if (!approved && rejectionReason) {
+      updateData.rejectionReason = rejectionReason;
+    }
+
     const property = await Property.findByIdAndUpdate(
       req.params.id,
-      { isApproved: approved },
+      updateData,
       { new: true }
     );
 

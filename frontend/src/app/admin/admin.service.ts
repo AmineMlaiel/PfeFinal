@@ -63,10 +63,21 @@ export class AdminService {
   }
 
   // Approve a property
-  approveProperty(propertyId: string, approved: boolean): Observable<any> {
+  approveProperty(
+    propertyId: string,
+    approved: boolean,
+    rejectionReason?: string
+  ): Observable<any> {
+    const payload: any = { approved };
+
+    // Include rejection reason if provided
+    if (!approved && rejectionReason) {
+      payload.rejectionReason = rejectionReason;
+    }
+
     return this.http.put<any>(
       `${this.propertyApiUrl}/${propertyId}/approve`,
-      { approved },
+      payload,
       this.authService.getHttpOptions()
     );
   }
