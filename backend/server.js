@@ -2,10 +2,14 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const path = require("path");
+const fileUpload = require("express-fileupload");
 require("dotenv").config();
 
 // Import routes
 const userRoutes = require("./routes/userRoute");
+const propertyRoutes = require("./routes/propertyRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 
 // Import utilities
 const connectDB = require("./config/db");
@@ -26,9 +30,27 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
 
+// File Upload middleware
+app.use(
+  fileUpload({
+    createParentPath: true,
+    limits: {
+      fileSize: process.env.MAX_FILE_SIZE || 5 * 1024 * 1024, // 5MB default
+    },
+    abortOnLimit: true,
+    useTempFiles: true,
+    tempFileDir: "/tmp/",
+  })
+);
+
+// Static folder for uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 // ---------------- API Routes ----------------
 app.use("/api/users", userRoutes);
-
+app.use("/api/properties", propertyRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/reviews", reviewRoutes);
 // ---------------- API Routes ----------------
 
 app.use((req, res, next) => {

@@ -1,63 +1,142 @@
-<div class="p-4 font-[sans-serif]">
-    <div class="max-w-6xl max-lg:max-w-3xl max-sm:max-w-sm mx-auto">
-      <div class="max-w-md mx-auto">
-        <h2 class="text-3xl font-extrabold text-gray-800 mb-12 text-center leading-10">Stay updated with the latest blog posts.</h2>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-sm:gap-8">
-        <div class="bg-white rounded overflow-hidden">
-          <img src="https://readymadeui.com/images/food.webp" alt="Blog Post 1" class="w-full h-52 object-cover" />
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Lorem Ipsum Dolor</h3>
-            <p class="text-gray-500 text-sm">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore...</p>
-            <p class="text-gray-800 text-[13px] font-semibold mt-4">08 April 2024</p>
-            <a href="javascript:void(0);" class="mt-4 inline-block px-4 py-2 rounded tracking-wider bg-purple-600 hover:bg-purple-700 text-white text-[13px]">Read More</a>
-          </div>
-        </div>
-        <div class="bg-white rounded overflow-hidden">
-          <img src="https://readymadeui.com/images/food11.webp" alt="Blog Post 2" class="w-full h-52 object-cover" />
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Consectetur Adipiscing</h3>
-            <p class="text-gray-500 text-sm">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore...</p>
-            <p class="text-gray-800 text-[13px] font-semibold mt-4">08 April 2024</p>
-            <a href="javascript:void(0);" class="mt-4 inline-block px-4 py-2 rounded tracking-wider bg-purple-600 hover:bg-purple-700 text-white text-[13px]">Read More</a>
-          </div>
-        </div>
-        <div class="bg-white rounded overflow-hidden">
-          <img src="https://readymadeui.com/images/food22.webp" alt="Blog Post 3" class="w-full h-52 object-cover" />
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Lorem Ipsum Sit Amet</h3>
-            <p class="text-gray-500 text-sm">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore...</p>
-            <p class="text-gray-800 text-[13px] font-semibold mt-4">08 April 2024</p>
-            <a href="javascript:void(0);" class="mt-4 inline-block px-4 py-2 rounded tracking-wider bg-purple-600 hover:bg-purple-700 text-white text-[13px]">Read More</a>
-          </div>
-        </div>
-        <div class="bg-white rounded overflow-hidden">
-          <img src="https://readymadeui.com/images/food33.webp" alt="Blog Post 3" class="w-full h-52 object-cover" />
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Lorem Ipsum Sit Amet</h3>
-            <p class="text-gray-500 text-sm">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore...</p>
-            <p class="text-gray-800 text-[13px] font-semibold mt-4">08 April 2024</p>
-            <a href="javascript:void(0);" class="mt-4 inline-block px-4 py-2 rounded tracking-wider bg-purple-600 hover:bg-purple-700 text-white text-[13px]">Read More</a>
-          </div>
-        </div>
-        <div class="bg-white rounded overflow-hidden">
-          <img src="https://readymadeui.com/images/food44.webp" alt="Blog Post 3" class="w-full h-52 object-cover" />
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Lorem Ipsum Sit Amet</h3>
-            <p class="text-gray-500 text-sm">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore...</p>
-            <p class="text-gray-800 text-[13px] font-semibold mt-4">08 April 2024</p>
-            <a href="javascript:void(0);" class="mt-4 inline-block px-4 py-2 rounded tracking-wider bg-purple-600 hover:bg-purple-700 text-white text-[13px]">Read More</a>
-          </div>
-        </div>
-        <div class="bg-white rounded overflow-hidden">
-          <img src="https://readymadeui.com/images/food55.webp" alt="Blog Post 3" class="w-full h-52 object-cover" />
-          <div class="p-6">
-            <h3 class="text-lg font-bold text-gray-800 mb-3">Lorem Ipsum Sit Amet</h3>
-            <p class="text-gray-500 text-sm">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore...</p>
-            <p class="text-gray-800 text-[13px] font-semibold mt-4">08 April 2024</p>
-            <a href="javascript:void(0);" class="mt-4 inline-block px-4 py-2 rounded tracking-wider bg-purple-600 hover:bg-purple-700 text-white text-[13px]">Read More</a>
-          </div>
-        </div>
+<div class="home-container">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1>Find Your Perfect Home</h1>
+      <p>Discover the ideal property for your lifestyle and needs</p>
+
+      <!-- Search Box -->
+      <div class="search-box">
+        <input
+          type="text"
+          [(ngModel)]="searchTerm"
+          placeholder="Search by city, neighborhood, or keyword..."
+          (keyup.enter)="searchProperties()"
+        />
+        <button (click)="searchProperties()">Search</button>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- Property Categories -->
+  <section class="categories-section">
+    <div class="section-header">
+      <h2>Browse by Property Type</h2>
+      <p>Explore our properties by category</p>
+    </div>
+
+    <div class="categories-grid">
+      <a
+        *ngFor="let type of propertyTypes"
+        [routerLink]="['/properties']"
+        [queryParams]="{ propertyType: type.value }"
+        class="category-card"
+      >
+        <div class="category-icon" [ngClass]="type.value"></div>
+        <h3>{{ type.label }}</h3>
+        <p>Explore {{ type.label }}</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- Featured Properties -->
+  <section class="featured-section">
+    <div class="section-header">
+      <h2>Featured Properties</h2>
+      <p>Handpicked properties for you</p>
+      <a [routerLink]="['/properties']" class="view-all">View All Properties</a>
+    </div>
+
+    <div *ngIf="loading" class="loading-indicator">
+      <div class="spinner"></div>
+      <p>Loading featured properties...</p>
+    </div>
+
+    <div *ngIf="error" class="error-message">
+      {{ error }}
+    </div>
+
+    <div *ngIf="!loading && !error" class="properties-grid">
+      <div *ngFor="let property of featuredProperties" class="property-card">
+        <div class="property-image">
+          <img
+            [src]="
+              property.images && property.images.length
+                ? property.images[0]
+                : 'assets/images/property-placeholder.jpg'
+            "
+            [alt]="property.title"
+          />
+          <div class="property-price">${{ property.price }}/night</div>
+          <div class="property-type">{{ property.propertyType }}</div>
+        </div>
+        <div class="property-details">
+          <h3>{{ property.title }}</h3>
+          <div class="property-location" *ngIf="property.address">
+            <i class="fa fa-map-marker"></i>
+            {{ property.address.city }}, {{ property.address.state }}
+          </div>
+          <div class="property-features">
+            <span><i class="fa fa-bed"></i> {{ property.bedrooms }} Beds</span>
+            <span
+              ><i class="fa fa-bath"></i> {{ property.bathrooms }} Baths</span
+            >
+            <span
+              ><i class="fa fa-ruler-combined"></i> {{ property.area }} sq
+              ft</span
+            >
+          </div>
+          <a
+            [routerLink]="['/properties', property._id]"
+            class="btn-view-details"
+            >View Details</a
+          >
+        </div>
+      </div>
+
+      <div
+        *ngIf="featuredProperties.length === 0 && !loading"
+        class="no-properties"
+      >
+        <p>No featured properties available at the moment.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works">
+    <div class="section-header">
+      <h2>How It Works</h2>
+      <p>Simple steps to find your perfect property</p>
+    </div>
+
+    <div class="steps-container">
+      <div class="step">
+        <div class="step-icon search"></div>
+        <h3>Search</h3>
+        <p>Browse our wide selection of properties</p>
+      </div>
+      <div class="step">
+        <div class="step-icon book"></div>
+        <h3>Book</h3>
+        <p>Reserve your favorite property</p>
+      </div>
+      <div class="step">
+        <div class="step-icon enjoy"></div>
+        <h3>Enjoy</h3>
+        <p>Move in and enjoy your new place</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section">
+    <div class="cta-content">
+      <h2>Ready to Find Your Dream Home?</h2>
+      <p>Start your search today and discover the perfect place to call home</p>
+      <a [routerLink]="['/properties']" class="cta-button"
+        >Explore Properties</a
+      >
+    </div>
+  </section>
+</div>

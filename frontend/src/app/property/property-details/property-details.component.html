@@ -1,0 +1,337 @@
+<div class="property-details-container">
+  <!-- Loading and error states -->
+  <div *ngIf="loading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading property details...</p>
+  </div>
+
+  <div *ngIf="error" class="error-container">
+    <div class="error-message">{{ error }}</div>
+    <button (click)="router.navigate(['/properties'])" class="btn-primary">
+      Back to Properties
+    </button>
+  </div>
+
+  <!-- Property details main content -->
+  <div *ngIf="!loading && !error && property" class="property-content">
+    <!-- Property header section -->
+    <div class="property-header">
+      <div class="header-left">
+        <h1>{{ property.title }}</h1>
+        <div class="property-location">
+          <i class="fa fa-map-marker"></i>
+          {{ property.address?.city }}, {{ property.address?.state }}
+        </div>
+        <div class="property-rating">
+          <div class="stars">
+            <span *ngFor="let star of [1, 2, 3, 4, 5]" class="star">
+              <i
+                [class]="
+                  star <= property.rating ? 'fa fa-star filled' : 'fa fa-star-o'
+                "
+              ></i>
+            </span>
+          </div>
+          <span class="review-count"
+            >{{ property.reviewCount || 0 }} reviews</span
+          >
+        </div>
+      </div>
+      <div class="header-right">
+        <button *ngIf="isOwner" (click)="editProperty()" class="btn-secondary">
+          <i class="fa fa-edit"></i> Edit
+        </button>
+        <button *ngIf="isOwner" (click)="deleteProperty()" class="btn-danger">
+          <i class="fa fa-trash"></i> Delete
+        </button>
+        <button
+          *ngIf="!isOwner"
+          (click)="bookmarkProperty()"
+          class="btn-outline"
+          [class.bookmarked]="property.isBookmarked"
+        >
+          <i
+            [class]="property.isBookmarked ? 'fa fa-heart' : 'fa fa-heart-o'"
+          ></i>
+          {{ property.isBookmarked ? "Saved" : "Save" }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Property images section -->
+    <div class="property-images">
+      <div class="main-image">
+        <img
+          [src]="
+            property.images && property.images.length > 0
+              ? property.images[selectedImageIndex]
+              : 'assets/images/property-placeholder.jpg'
+          "
+          [alt]="property.title"
+        />
+      </div>
+      <div
+        class="image-thumbnails"
+        *ngIf="property.images && property.images.length > 1"
+      >
+        <div
+          *ngFor="let image of property.images; let i = index"
+          class="thumbnail"
+          [class.active]="i === selectedImageIndex"
+          (click)="selectImage(i)"
+        >
+          <img [src]="image" [alt]="property.title + ' image ' + (i + 1)" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Property info and booking section -->
+    <div class="property-main">
+      <div class="property-info">
+        <div class="property-description">
+          <h2>About this property</h2>
+          <p>{{ property.description }}</p>
+        </div>
+
+        <div class="property-details-section">
+          <h2>Property Details</h2>
+          <div class="details-grid">
+            <div class="detail-item">
+              <i class="fa fa-home"></i>
+              <div>
+                <h4>Type</h4>
+                <p>{{ property.propertyType | titlecase }}</p>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fa fa-bed"></i>
+              <div>
+                <h4>Bedrooms</h4>
+                <p>{{ property.bedrooms }}</p>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fa fa-bath"></i>
+              <div>
+                <h4>Bathrooms</h4>
+                <p>{{ property.bathrooms }}</p>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fa fa-ruler-combined"></i>
+              <div>
+                <h4>Area</h4>
+                <p>{{ property.area }} sq ft</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="property-amenities"
+          *ngIf="property.features && property.features.length > 0"
+        >
+          <h2>Amenities</h2>
+          <div class="amenities-grid">
+            <div class="amenity-item" *ngFor="let feature of property.features">
+              <i [class]="'fa ' + getFeatureIcon(feature)"></i>
+              <span>{{ feature | titlecase }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="property-location-section">
+          <h2>Location</h2>
+          <div class="address-details">
+            <p>{{ property.address?.street }}</p>
+            <p>
+              {{ property.address?.city }}, {{ property.address?.state }}
+              {{ property.address?.zipCode }}
+            </p>
+            <p>{{ property.address?.country }}</p>
+          </div>
+          <!-- Map container for Leaflet -->
+          <div
+            id="property-map"
+            class="property-map"
+            *ngIf="property?.location?.coordinates?.length === 2"
+          ></div>
+          <!-- Fallback if no coordinates are available -->
+          <div
+            class="map-placeholder"
+            *ngIf="
+              !property?.location?.coordinates ||
+              property?.location?.coordinates?.length !== 2
+            "
+          >
+            <p>Map location not available</p>
+          </div>
+        </div>
+
+        <!-- Property reviews section -->
+        <div class="property-reviews">
+          <h2>Reviews ({{ reviews.length }})</h2>
+
+          <!-- Review form -->
+          <div class="review-form" *ngIf="isLoggedIn && !reviewSubmitted">
+            <h3>Leave a Review</h3>
+            <div class="rating-select">
+              <label>Rating:</label>
+              <div class="star-rating">
+                <span
+                  *ngFor="let star of [1, 2, 3, 4, 5]"
+                  (click)="newReview.rating = star"
+                  class="star"
+                >
+                  <i
+                    [class]="
+                      star <= newReview.rating
+                        ? 'fa fa-star filled'
+                        : 'fa fa-star-o'
+                    "
+                  ></i>
+                </span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="review-comment">Your Review:</label>
+              <textarea
+                id="review-comment"
+                rows="4"
+                [(ngModel)]="newReview.comment"
+                placeholder="Share your experience with this property..."
+              ></textarea>
+            </div>
+            <button
+              (click)="submitReview()"
+              class="btn-primary"
+              [disabled]="!newReview.comment.trim()"
+            >
+              Submit Review
+            </button>
+          </div>
+
+          <div class="thank-you-message" *ngIf="reviewSubmitted">
+            <p>Thank you for your review!</p>
+          </div>
+
+          <!-- Review sign-in prompt -->
+          <div class="review-signin-prompt" *ngIf="!isLoggedIn">
+            <p>
+              Please
+              <a
+                [routerLink]="['/login']"
+                [queryParams]="{ redirect: '/properties/' + propertyId }"
+                >log in</a
+              >
+              to leave a review.
+            </p>
+          </div>
+
+          <!-- Reviews list -->
+          <div class="reviews-list" *ngIf="reviews.length > 0">
+            <div class="review-item" *ngFor="let review of reviews">
+              <div class="review-header">
+                <div class="reviewer-info">
+                  <div class="reviewer-avatar">
+                    <i class="fa fa-user"></i>
+                  </div>
+                  <div class="reviewer-details">
+                    <h4>{{ review.reviewer?.name || "Anonymous" }}</h4>
+                    <p class="review-date">
+                      {{ review.createdAt | date : "mediumDate" }}
+                    </p>
+                  </div>
+                </div>
+                <div class="review-rating">
+                  <span *ngFor="let star of [1, 2, 3, 4, 5]" class="star">
+                    <i
+                      [class]="
+                        star <= review.rating
+                          ? 'fa fa-star filled'
+                          : 'fa fa-star-o'
+                      "
+                    ></i>
+                  </span>
+                </div>
+              </div>
+              <div class="review-content">
+                <p>{{ review.comment }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="no-reviews" *ngIf="reviews.length === 0">
+            <p>
+              This property has no reviews yet. Be the first to leave a review!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Booking card section -->
+      <div class="booking-card" *ngIf="!isOwner">
+        <div class="booking-card-header">
+          <div class="booking-price">
+            <span class="price">${{ property.price }}</span>
+            <span class="night">/ night</span>
+          </div>
+          <div class="booking-rating">
+            <i class="fa fa-star filled"></i>
+            <span
+              >{{ property.rating.toFixed(1) }} ({{
+                property.reviewCount || 0
+              }})</span
+            >
+          </div>
+        </div>
+
+        <div class="booking-form">
+          <div class="date-inputs">
+            <div class="form-group">
+              <label for="check-in">Check-in</label>
+              <input
+                type="date"
+                id="check-in"
+                [(ngModel)]="bookingStartDate"
+                (change)="calculateBookingDetails()"
+                [min]="formatDate(today)"
+              />
+            </div>
+            <div class="form-group">
+              <label for="check-out">Check-out</label>
+              <input
+                type="date"
+                id="check-out"
+                [(ngModel)]="bookingEndDate"
+                (change)="calculateBookingDetails()"
+                [min]="bookingStartDate"
+              />
+            </div>
+          </div>
+
+          <div class="booking-error" *ngIf="bookingError">
+            {{ bookingError }}
+          </div>
+
+          <div class="booking-details" *ngIf="bookingDuration > 0">
+            <div class="booking-detail-item">
+              <span>${{ property.price }} x {{ bookingDuration }} nights</span>
+              <span>${{ bookingTotal }}</span>
+            </div>
+            <div class="booking-total">
+              <span>Total</span>
+              <span>${{ bookingTotal }}</span>
+            </div>
+          </div>
+
+          <button (click)="bookProperty()" class="btn-book">Book Now</button>
+
+          <div class="booking-note">
+            <p>You won't be charged yet</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
