@@ -67,6 +67,9 @@ export class PropertyAddComponent implements OnInit {
       zipCode: '',
       country: '',
     },
+    location: {
+      coordinates: [0, 0], // Default coordinates [longitude, latitude]
+    },
     features: [] as string[],
     availability: {
       isAvailable: true,
@@ -228,60 +231,105 @@ export class PropertyAddComponent implements OnInit {
       return;
     }
 
-    // First create the property
-    this.propertyService.createProperty(this.property).subscribe({
-      next: (propertyResponse) => {
-        const propertyId = propertyResponse.data._id;
+    // Get coordinates from address
+    this.getCoordinatesFromAddress()
+      .then(() => {
+        // First create the property
+        this.propertyService.createProperty(this.property).subscribe({
+          next: (propertyResponse) => {
+            const propertyId = propertyResponse.data._id;
 
-        // Then upload images if there are any
-        if (this.imageFiles.length > 0) {
-          // Create FormData for image upload
-          const formData = new FormData();
-          this.imageFiles.forEach((file) => {
-            formData.append('images', file);
-          });
+            // Then upload images if there are any
+            if (this.imageFiles.length > 0) {
+              // Create FormData for image upload
+              const formData = new FormData();
+              this.imageFiles.forEach((file) => {
+                formData.append('images', file);
+              });
 
-          // Upload images
-          this.propertyService
-            .uploadPropertyImages(propertyId, formData)
-            .subscribe({
-              next: (imageResponse) => {
-                this.success = true;
-                this.loading = false;
+              // Upload images
+              this.propertyService
+                .uploadPropertyImages(propertyId, formData)
+                .subscribe({
+                  next: (imageResponse) => {
+                    this.success = true;
+                    this.loading = false;
 
-                // Redirect to property details after a short delay
-                setTimeout(() => {
-                  this.router.navigate(['/properties', propertyId]);
-                }, 1500);
-              },
-              error: (err) => {
-                console.error('Error uploading images:', err);
-                this.error =
-                  'Property created but failed to upload images. You can add images later.';
-                this.loading = false;
-                this.success = true; // Still consider it a success
+                    // Redirect to property details after a short delay
+                    setTimeout(() => {
+                      this.router.navigate(['/properties', propertyId]);
+                    }, 1500);
+                  },
+                  error: (err) => {
+                    console.error('Error uploading images:', err);
+                    this.error =
+                      'Property created but failed to upload images. You can add images later.';
+                    this.loading = false;
+                    this.success = true; // Still consider it a success
 
-                // Redirect to property details after a short delay
-                setTimeout(() => {
-                  this.router.navigate(['/properties', propertyId]);
-                }, 2000);
-              },
-            });
-        } else {
-          this.success = true;
-          this.loading = false;
+                    // Redirect to property details after a short delay
+                    setTimeout(() => {
+                      this.router.navigate(['/properties', propertyId]);
+                    }, 2000);
+                  },
+                });
+            } else {
+              this.success = true;
+              this.loading = false;
 
-          // Redirect to property details after a short delay
-          setTimeout(() => {
-            this.router.navigate(['/properties', propertyId]);
-          }, 1500);
-        }
-      },
-      error: (err) => {
-        console.error('Error creating property:', err);
-        this.error = 'Failed to create property. Please try again.';
+              // Redirect to property details after a short delay
+              setTimeout(() => {
+                this.router.navigate(['/properties', propertyId]);
+              }, 1500);
+            }
+          },
+          error: (err) => {
+            console.error('Error creating property:', err);
+            this.error = 'Failed to create property. Please try again.';
+            this.loading = false;
+          },
+        });
+      })
+      .catch((error) => {
+        console.error('Error geocoding address:', error);
+        this.error =
+          'Failed to geocode address. Please verify your address is correct.';
         this.loading = false;
-      },
-    });
+      });
+  }
+
+  // Get coordinates from address using Nominatim API (OpenStreetMap)
+  async getCoordinatesFromAddress(): Promise<void> {
+    const { street, city, state, zipCode, country } = this.property.address;
+    const addressString = `${street}, ${city}, ${state}, ${zipCode}, ${country}`;
+
+    try {
+      // Encode the address for URL
+      const encodedAddress = encodeURIComponent(addressString);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to geocode address');
+      }
+
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        // Nominatim returns [lat, lon] but MongoDB expects [lon, lat]
+        this.property.location.coordinates = [
+          parseFloat(data[0].lon),
+          parseFloat(data[0].lat),
+        ];
+      } else {
+        // If no results found, use default coordinates
+        this.property.location.coordinates = [0, 0];
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      // If error, use default coordinates
+      this.property.location.coordinates = [0, 0];
+    }
   }
 }

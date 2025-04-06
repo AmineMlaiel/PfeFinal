@@ -276,68 +276,121 @@ export class PropertyUpdateComponent implements OnInit {
     this.loading = true;
     this.error = null;
 
-    // First delete any images that need to be removed
-    const updateProperty = () => {
-      // Clone the property to avoid any reference issues
-      const updatedProperty = { ...this.property };
+    // Get coordinates from address
+    this.getCoordinatesFromAddress()
+      .then(() => {
+        // Clone the property to avoid any reference issues
+        const updatedProperty = { ...this.property };
 
-      // Update existing images in property data
-      updatedProperty.images = [...this.existingImages];
+        // Update existing images in property data
+        updatedProperty.images = [...this.existingImages];
 
-      // Handle property update with potential new images
-      const updateWithImages = () => {
-        if (this.imageFiles.length > 0) {
-          // If there are new images, upload them first
-          const formData = new FormData();
-          this.imageFiles.forEach((file) => {
-            formData.append('images', file);
-          });
+        // Handle property update with potential new images
+        const updateWithImages = () => {
+          if (this.imageFiles.length > 0) {
+            // If there are new images, upload them first
+            const formData = new FormData();
+            this.imageFiles.forEach((file) => {
+              formData.append('images', file);
+            });
 
+            this.propertyService
+              .uploadPropertyImages(this.propertyId, formData)
+              .subscribe(
+                (imageUrls) => {
+                  // Combine existing and new images
+                  updatedProperty.images = [
+                    ...updatedProperty.images,
+                    ...imageUrls,
+                  ];
+
+                  // Now update the property data
+                  this.propertyService
+                    .updateProperty(this.propertyId, updatedProperty)
+                    .subscribe(
+                      () => this.handleSuccess(),
+                      (error) => this.handleError(error)
+                    );
+                },
+                (error) => this.handleError(error)
+              );
+          } else {
+            // No new images to upload, just update property data
+            this.propertyService
+              .updateProperty(this.propertyId, updatedProperty)
+              .subscribe(
+                () => this.handleSuccess(),
+                (error) => this.handleError(error)
+              );
+          }
+        };
+
+        // Process any images to delete
+        if (this.imagesToDelete.length > 0) {
           this.propertyService
-            .uploadPropertyImages(this.propertyId, formData)
+            .deletePropertyImages(this.propertyId, this.imagesToDelete)
             .subscribe(
-              (imageUrls) => {
-                // Combine existing and new images
-                updatedProperty.images = [
-                  ...updatedProperty.images,
-                  ...imageUrls,
-                ];
-
-                // Now update the property data
-                this.propertyService
-                  .updateProperty(this.propertyId, updatedProperty)
-                  .subscribe(
-                    () => this.handleSuccess(),
-                    (error) => this.handleError(error)
-                  );
-              },
+              () => updateWithImages(),
               (error) => this.handleError(error)
             );
         } else {
-          // No new images to upload, just update property data
-          this.propertyService
-            .updateProperty(this.propertyId, updatedProperty)
-            .subscribe(
-              () => this.handleSuccess(),
-              (error) => this.handleError(error)
-            );
+          updateWithImages();
         }
-      };
+      })
+      .catch((error) => {
+        console.error('Error geocoding address:', error);
+        this.error =
+          'Failed to geocode address. Please verify your address is correct.';
+        this.loading = false;
+      });
+  }
 
-      // Process any images to delete
-      if (this.imagesToDelete.length > 0) {
-        this.propertyService
-          .deletePropertyImages(this.propertyId, this.imagesToDelete)
-          .subscribe(
-            () => updateWithImages(),
-            (error) => this.handleError(error)
-          );
-      } else {
-        updateWithImages();
+  // Get coordinates from address using Nominatim API (OpenStreetMap)
+  async getCoordinatesFromAddress(): Promise<void> {
+    const { street, city, state, zipCode, country } = this.property.address;
+    const addressString = `${street}, ${city}, ${state}, ${zipCode}, ${country}`;
+
+    try {
+      // Encode the address for URL
+      const encodedAddress = encodeURIComponent(addressString);
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to geocode address');
       }
-    };
 
-    updateProperty();
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        // Nominatim returns [lat, lon] but MongoDB expects [lon, lat]
+        // Ensure location object exists
+        if (!this.property.location) {
+          this.property.location = { coordinates: [0, 0] };
+        }
+
+        this.property.location.coordinates = [
+          parseFloat(data[0].lon),
+          parseFloat(data[0].lat),
+        ];
+      } else {
+        // If no results found, use default coordinates
+        if (!this.property.location) {
+          this.property.location = { coordinates: [0, 0] };
+        } else {
+          this.property.location.coordinates = [0, 0];
+        }
+      }
+    } catch (error) {
+      console.error('Geocoding error:', error);
+      // If error, use default coordinates
+      if (!this.property.location) {
+        this.property.location = { coordinates: [0, 0] };
+      } else {
+        this.property.location.coordinates = [0, 0];
+      }
+    }
   }
 
   private handleSuccess(): void {

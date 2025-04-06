@@ -14,6 +14,10 @@ export interface Property {
     zipCode: string;
     country: string;
   };
+  location?: {
+    coordinates: number[];
+    type?: string;
+  };
   features: string[];
   availability: {
     isAvailable: boolean;
