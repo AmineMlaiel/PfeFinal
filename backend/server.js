@@ -20,6 +20,9 @@ const { notFound } = require("./utils/errorHandler");
 const app = express();
 const port = process.env.PORT || 3000;
 
+//checking the mode 
+console.log("Current environment:", process.env.NODE_ENV);
+
 // Connect to MongoDB
 connectDB()
   .then(() => console.log("Database connection established"))

@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+  import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuthService } from '../auth/auth.service';
+import { map } from 'rxjs/operators';
 
 @Injectable({
   providedIn: 'root',
@@ -13,13 +14,13 @@ export class AdminService {
 
   constructor(private http: HttpClient, private authService: AuthService) {}
 
-  // Get the list of users
   getUsers(): Observable<any> {
     return this.http.get<any>(
       `${this.apiUrl}`,
       this.authService.getHttpOptions()
     ); // Fetch all users
   }
+  
 
   // Validate a user by changing their validation status
   validateUser(userId: string): Observable<any> {
