@@ -36,8 +36,8 @@ export class AdminDashboardComponent implements OnInit {
 
     // Fetch users when the component loads
     this.adminService.getUsers().subscribe({
-      next: (users: any[]) => {
-        this.users = users;
+      next: (response : any) => {
+        this.users = response.users;
       },
       error: (error) => {
         console.error('Error fetching users:', error);

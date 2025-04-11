@@ -4,7 +4,9 @@
   "description": "git clone https://github.com/AmineMlaiel/PfeFinal",
   "main": "index.js",
   "scripts": {
-    "start": "concurrently \"cd backend && nodemon\" \"cd frontend && ng s \"",
+     "dev": "concurrently \"cd backend && set NODE_ENV=development && nodemon\" \"cd frontend && set NODE_ENV=development && ng s\"",
+  "start": "concurrently \"cd backend && set NODE_ENV=production && node server.js\" \"cd frontend && set NODE_ENV=production && ng s\""
+,
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
