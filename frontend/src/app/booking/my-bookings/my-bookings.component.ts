@@ -19,6 +19,10 @@ export class MyBookingsComponent implements OnInit {
   error: string | null = null;
   activeFilter: 'all' | 'upcoming' | 'past' | 'cancelled' = 'all';
   isUserLoggedIn = false;
+  
+  // For delete confirmation modal
+  showDeleteModal = false;
+  bookingToDelete: string = '';
 
   constructor(
     private bookingService: BookingService,
@@ -86,14 +90,30 @@ export class MyBookingsComponent implements OnInit {
         break;
       case 'upcoming':
         this.filteredBookings = this.bookings.filter((booking) => {
-          const checkOutDate = new Date(booking.checkOut);
-          return checkOutDate >= today && booking.status !== 'cancelled';
+          // Handle both monthly bookings and legacy bookings
+          if (booking.bookingMonth) {
+            const bookingDate = new Date(booking.bookingMonth);
+            const lastDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth() + 1, 0);
+            return lastDayOfMonth >= today && booking.status !== 'cancelled';
+          } else if (booking.checkOut) {
+            const checkOutDate = new Date(booking.checkOut);
+            return checkOutDate >= today && booking.status !== 'cancelled';
+          }
+          return false;
         });
         break;
       case 'past':
         this.filteredBookings = this.bookings.filter((booking) => {
-          const checkOutDate = new Date(booking.checkOut);
-          return checkOutDate < today && booking.status !== 'cancelled';
+          // Handle both monthly bookings and legacy bookings
+          if (booking.bookingMonth) {
+            const bookingDate = new Date(booking.bookingMonth);
+            const lastDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth() + 1, 0);
+            return lastDayOfMonth < today && booking.status !== 'cancelled';
+          } else if (booking.checkOut) {
+            const checkOutDate = new Date(booking.checkOut);
+            return checkOutDate < today && booking.status !== 'cancelled';
+          }
+          return false;
         });
         break;
       case 'cancelled':
@@ -139,16 +159,59 @@ export class MyBookingsComponent implements OnInit {
     });
   }
 
-  // Helper method to check if booking is cancellable (e.g., not in the past and not already cancelled)
-  canCancelBooking(booking: Booking): boolean {
-    const today = new Date();
-    const checkInDate = new Date(booking.checkIn);
-    return (
-      checkInDate > today &&
-      booking.status !== 'cancelled' &&
-      booking.status !== 'completed'
-    );
+  // New method to confirm deletion with modal
+  confirmDeleteBooking(bookingId: string): void {
+    this.bookingToDelete = bookingId;
+    this.showDeleteModal = true;
   }
+  
+  deleteBooking(): void {
+    if (!this.bookingToDelete) {
+      this.showDeleteModal = false;
+      return;
+    }
+  
+    this.bookingService.deleteBooking(this.bookingToDelete).subscribe({
+      next: (response) => {
+        // Remove the booking from the local array
+        this.bookings = this.bookings.filter((b) => b._id !== this.bookingToDelete);
+        this.applyFilter(this.activeFilter);  // Reapply any filters
+        alert('Booking request deleted successfully.');
+      },
+      error: (err) => {
+        console.error('Error deleting booking:', err);
+        alert(err.error?.message || 'An error occurred while deleting the booking request.');
+      },
+      complete: () => {
+        this.showDeleteModal = false;  // Hide the modal after operation
+        this.bookingToDelete = '';     // Reset the booking to delete
+      }
+    });
+  }
+  
+  
+
+  // Helper method to check if booking is cancellable (e.g., not in the past and not already cancelled)
+ // Can the booking be canceled?
+canCancelBooking(booking: Booking): boolean {
+  const today = new Date();
+  // Check if it's a monthly booking or a regular booking
+  if (booking.bookingMonth) {
+    const bookingDate = new Date(booking.bookingMonth);
+    const lastDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth() + 1, 0);
+    return lastDayOfMonth >= today && booking.status !== 'cancelled' && booking.status !== 'completed';
+  } else if (booking.checkIn) {
+    const checkInDate = new Date(booking.checkIn);
+    return checkInDate > today && booking.status !== 'cancelled' && booking.status !== 'completed';
+  }
+  return false;
+}
+
+// Can the booking be deleted? (Check pending status and canDelete flag)
+canDeleteBooking(booking: Booking): boolean {
+  return booking.status === 'pending' && (booking.canDelete !== false);
+}
+
 
   // Helper method to format date for display
   formatDate(date: string | Date): string {
@@ -156,6 +219,15 @@ export class MyBookingsComponent implements OnInit {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
+    });
+  }
+
+  // Helper method to format month for display
+  formatMonth(date: string | Date | undefined): string {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
     });
   }
 

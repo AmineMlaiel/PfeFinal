@@ -10,6 +10,7 @@ const {
   getBookingCalendar,
   checkAvailability,
   calculateBookingPrice,
+  deleteBooking,
 } = require("../controllers/bookingController");
 const { protect, admin } = require("../middleware/authMiddleware");
 
@@ -28,5 +29,9 @@ router.get("/property/:propertyId", protect, getPropertyBookings);
 router.get("/:id", protect, getBooking);
 router.put("/:id/status", protect, updateBookingStatus);
 router.post("/:id/messages", protect, addBookingMessage);
+
+router.delete("/:id", protect, deleteBooking);
+
+
 
 module.exports = router;

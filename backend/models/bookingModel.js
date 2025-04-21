@@ -12,6 +12,10 @@ const bookingSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "User is required"],
     },
+    bookingMonth :{
+      type: Date ,
+      required: [true, "Booking month is required"],
+    },
     checkIn: {
       type: Date,
       required: [true, "Check-in date is required"],

@@ -63,19 +63,26 @@ export class BookingService {
     return this.updateBookingStatus(bookingId, 'cancelled');
   }
 
-  // Calculate price for a booking
+  // Delete a booking (user side)
+  deleteBooking(bookingId: string): Observable<any> {
+    const headers = this.authService.getHttpHeaders();
+    return this.http.delete<any>(`${this.apiUrl}/${bookingId}`, {
+      headers,
+    });
+  }
+
+  // Calculate price for a booking - updated for monthly booking
   calculateBookingPrice(
     propertyId: string,
-    checkIn: string,
-    checkOut: string,
+    bookingMonth: string,
     guests: { adults: number; children: number }
   ): Observable<{
     success: boolean;
     data: {
       breakdown: {
         basePrice: number;
-        nights: number;
-        nightlyRate: number;
+        daysInMonth: number;
+        monthlyDiscount: string;
         additionalGuestFee: number;
         cleaningFee: number;
         serviceFee: number;
@@ -89,8 +96,8 @@ export class BookingService {
       data: {
         breakdown: {
           basePrice: number;
-          nights: number;
-          nightlyRate: number;
+          daysInMonth: number;
+          monthlyDiscount: string;
           additionalGuestFee: number;
           cleaningFee: number;
           serviceFee: number;
@@ -98,14 +105,13 @@ export class BookingService {
         };
       };
       message?: string;
-    }>(`${this.apiUrl}/calculate`, { propertyId, checkIn, checkOut, guests });
+    }>(`${this.apiUrl}/calculate`, { propertyId, bookingMonth, guests });
   }
 
-  // Check if a property is available for specific dates
+  // Check if a property is available for specific month - updated for monthly booking
   checkAvailability(
     propertyId: string,
-    checkIn: string,
-    checkOut: string
+    bookingMonth: string
   ): Observable<{
     success: boolean;
     isAvailable: boolean;
@@ -115,6 +121,6 @@ export class BookingService {
       success: boolean;
       isAvailable: boolean;
       message: string;
-    }>(`${this.apiUrl}/check-availability`, { propertyId, checkIn, checkOut });
+    }>(`${this.apiUrl}/check-availability`, { propertyId, bookingMonth });
   }
 }
