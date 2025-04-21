@@ -1,6 +1,9 @@
 const Booking = require("../models/bookingModel");
 const Property = require("../models/propertyModel");
 const User = require("../models/userModel");
+const mongoose = require("mongoose");
+
+
 
 // @desc    Create a new booking
 // @route   POST /api/bookings
@@ -48,6 +51,14 @@ exports.createBooking = async (req, res) => {
     // Parse dates
     const startDate = new Date(checkIn);
     const endDate = new Date(checkOut);
+    const bookingDate = new Date(bookingMonth);
+
+   // Calculate first and last day of the month for compatibility
+    const firstDate =new Date(bookingDate.getFullYear(),bookingDate.getMonth(),1);
+    const lastDate = newDate(bookingDate.getFullYear(),bookingDate.getMonth(),+ 1,0);
+
+
+
 
     // Validate dates
     if (endDate <= startDate) {
@@ -61,12 +72,10 @@ exports.createBooking = async (req, res) => {
     const existingBooking = await Booking.findOne({
       propertyId,
       status: { $in: ["confirmed", "pending"] },
-      $or: [
-        {
-          checkIn: { $lte: endDate },
-          checkOut: { $gte: startDate },
-        },
-      ],
+      bookingMonth : {
+        $gte : new Date(bookingDate.getFullYear(), bookingDate.getMonth(),1),
+        $lt : new Date(bookingDate.getFullYear(), bookingDate.getmonth() +1, 1)
+      }
     });
 
     if (existingBooking) {
@@ -80,14 +89,16 @@ exports.createBooking = async (req, res) => {
     const bookingData = {
       propertyId,
       userId: req.user._id,
-      checkIn,
-      checkOut,
+      bookingMonth: bookingDate,
+      checkIn :firstDate,
+      checkOut: lastDate,
       totalPrice,
       guests,
       contactInfo,
       specialRequests,
       status: "pending",
-      property: propertyId, // Setting both propertyId and property fields
+      property: propertyId,
+      canDelete: true, // Setting both propertyId and property fields
     };
 
     // Create booking
@@ -305,6 +316,7 @@ exports.updateBookingStatus = async (req, res) => {
   }
 };
 
+
 // @desc    Add message to booking
 // @route   POST /api/bookings/:id/messages
 // @access  Private
@@ -487,13 +499,13 @@ exports.getBookingCalendar = async (req, res) => {
 // @access  Public
 exports.checkAvailability = async (req, res) => {
   try {
-    const { propertyId, checkIn, checkOut } = req.body;
+    const { propertyId, bookingMonth } = req.body;
 
     // Validate required fields
-    if (!propertyId || !checkIn || !checkOut) {
+    if (!propertyId || !bookingMonth) {
       return res.status(400).json({
         success: false,
-        message: "Property ID, check-in and check-out dates are required",
+        message: "Property ID and booking month are required",
       });
     }
 
@@ -518,6 +530,7 @@ exports.checkAvailability = async (req, res) => {
     // Parse dates
     const startDate = new Date(checkIn);
     const endDate = new Date(checkOut);
+    const bookingDate = new Date(bookingMonth);
 
     // Validate dates
     if (endDate <= startDate) {
@@ -531,12 +544,10 @@ exports.checkAvailability = async (req, res) => {
     const existingBooking = await Booking.findOne({
       propertyId,
       status: { $in: ["confirmed", "pending"] },
-      $or: [
-        {
-          checkIn: { $lte: endDate },
-          checkOut: { $gte: startDate },
-        },
-      ],
+      bookingMonth: {
+        $gte: new Date(bookingDate.getFullYear(),bookingDate.getMonth(),1),
+        $lt: new Date(bookingDate.getFullYear(),bookingMonth.getMonth(), +1 ,1)
+      }
     });
 
     // Return availability status
@@ -561,14 +572,13 @@ exports.checkAvailability = async (req, res) => {
 // @access  Public
 exports.calculateBookingPrice = async (req, res) => {
   try {
-    const { propertyId, checkIn, checkOut, guests } = req.body;
+    const { propertyId, bookingMonth, guests } = req.body;
 
     // Validate required fields
-    if (!propertyId || !checkIn || !checkOut || !guests) {
+    if (!propertyId || !bookingMonth || !guests) {
       return res.status(400).json({
         success: false,
-        message:
-          "Property ID, check-in, check-out dates and guests information are required",
+        message: "Property ID, booking month, and guests information are required",
       });
     }
 
@@ -581,30 +591,16 @@ exports.calculateBookingPrice = async (req, res) => {
       });
     }
 
-    // Parse dates
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
-
-    // Validate dates
-    if (endDate <= startDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Check-out date must be after check-in date",
-      });
-    }
-
-    // Calculate number of nights
-    const nights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-    if (nights < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "Booking must be for at least one night",
-      });
-    }
-
-    // Calculate base price
-    const basePrice = nights * property.price;
+    // Calculate monthly price (assuming property.price is daily rate)
+    const daysInMonth = new Date(
+      new Date(bookingMonth).getFullYear(),
+      new Date(bookingMonth).getMonth() + 1,
+      0
+    ).getDate();
+    
+    // Apply a monthly discount (e.g., 15% off daily rate)
+    const monthlyDiscount = 0.15;
+    const basePrice = property.price * daysInMonth * (1 - monthlyDiscount);
 
     // Calculate additional guest fee if applicable
     let additionalGuestFee = 0;
@@ -612,32 +608,29 @@ exports.calculateBookingPrice = async (req, res) => {
 
     if (property.additionalGuestFee && totalGuests > property.baseGuests) {
       const additionalGuests = totalGuests - property.baseGuests;
-      additionalGuestFee =
-        additionalGuests * property.additionalGuestFee * nights;
+      additionalGuestFee = additionalGuests * property.additionalGuestFee * daysInMonth;
     }
 
-    // Calculate cleaning fee
+    // Calculate cleaning fee (one-time)
     const cleaningFee = property.cleaningFee || 0;
 
     // Calculate service fee (e.g., 10% of base price)
-    const serviceFee = Math.round(basePrice * 0.1);
+    const serviceFee = basePrice * 0.1;
 
     // Calculate total price
-    const totalPrice =
-      basePrice + additionalGuestFee + cleaningFee + serviceFee;
+    const totalPrice = basePrice + additionalGuestFee + cleaningFee + serviceFee;
 
-    // Return price breakdown
     res.status(200).json({
       success: true,
       data: {
         breakdown: {
           basePrice,
-          nights,
-          nightlyRate: property.price,
           additionalGuestFee,
           cleaningFee,
           serviceFee,
           totalPrice,
+          daysInMonth,
+          monthlyDiscount: `${monthlyDiscount * 100}%`,
         },
       },
     });
@@ -646,5 +639,31 @@ exports.calculateBookingPrice = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+
+// Delete booking by ID
+exports.deleteBooking = async (req, res) => {
+  try {
+    const bookingId = req.params.id;
+
+    // Ensure the ID format is valid (optional, but good practice)
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking ID" });
+    }
+
+    // Attempt to delete the booking
+    const deletedBooking = await Booking.findByIdAndDelete(bookingId);
+
+    if (!deletedBooking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    // Send success response
+    return res.status(200).json({ message: "Booking deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting booking:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

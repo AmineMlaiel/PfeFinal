@@ -2,8 +2,11 @@ export interface Booking {
   _id?: string;
   propertyId: string;
   userId?: string;
-  checkIn: Date | string;
-  checkOut: Date | string;
+  // Added for monthly booking
+  bookingMonth: Date | string;
+  // Keep for backward compatibility
+  checkIn?: Date | string;
+  checkOut?: Date | string;
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   guests: {
@@ -33,6 +36,8 @@ export interface Booking {
     name: string;
     email: string;
   };
+  // Added for user request management
+  canDelete?: boolean;
 }
 
 export interface BookingResponse {

@@ -55,6 +55,9 @@ export class PropertyListComponent implements OnInit {
     bedrooms: null,
     bathrooms: null,
     search: '',
+    title : '',
+    description : '',
+    location : ''
   };
   isLoggedIn = false;
   isBrowser: boolean;
@@ -112,28 +115,42 @@ export class PropertyListComponent implements OnInit {
 
   applyFilters(): any {
     const appliedFilters: any = {};
-
-    // Handle text search and property type normally
-    if (this.filters.search) appliedFilters.search = this.filters.search;
-    if (this.filters.propertyType)
-      appliedFilters.propertyType = this.filters.propertyType;
-
-    // Handle price range filters - convert to backend filter format
-    if (this.filters.minPrice)
-      appliedFilters['price[gte]'] = this.filters.minPrice;
-    if (this.filters.maxPrice)
-      appliedFilters['price[lte]'] = this.filters.maxPrice;
-
-    // Handle room filters
-    if (this.filters.bedrooms)
-      appliedFilters['bedrooms[gte]'] = this.filters.bedrooms;
-    if (this.filters.bathrooms)
-      appliedFilters['bathrooms[gte]'] = this.filters.bathrooms;
-
-    console.log('Applied filters:', appliedFilters);
+  
+    // Simple text search (combines all text fields)
+    if (this.filters.search) {
+      appliedFilters.search = this.filters.search;
+    }
+  
+    // Specific field searches
+    if (this.filters.title) appliedFilters.title = this.filters.title;
+    if (this.filters.description) appliedFilters.description = this.filters.description;
+    
+    // Location searches
+    if (this.filters.city) appliedFilters.city = this.filters.city;
+    if (this.filters.area) appliedFilters.area = this.filters.area;
+  
+    // Numeric filters
+    if (this.filters.minPrice) appliedFilters.minPrice = this.filters.minPrice;
+    if (this.filters.maxPrice) appliedFilters.maxPrice = this.filters.maxPrice;
+    if (this.filters.bedrooms) appliedFilters.bedrooms = this.filters.bedrooms;
+    if (this.filters.bathrooms) appliedFilters.bathrooms = this.filters.bathrooms;
+  
+    // Property type
+    if (this.filters.propertyType) appliedFilters.propertyType = this.filters.propertyType;
+  
+    // Features (comma-separated if multiple)
+    if (this.filters.features) {
+      appliedFilters.features = Array.isArray(this.filters.features) 
+        ? this.filters.features.join(',')
+        : this.filters.features;
+    }
+  
+    // Always include approved properties only
+    appliedFilters.isApproved = true;
+  
+    console.log('Final filters:', appliedFilters);
     return appliedFilters;
   }
-
   resetFilters(): void {
     this.filters = {
       propertyType: '',

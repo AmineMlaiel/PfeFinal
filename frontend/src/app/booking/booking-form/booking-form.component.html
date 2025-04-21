@@ -4,56 +4,34 @@
     <div class="price-info">
       <span class="price">{{ property.price | currency }} </span>
       <span class="per-night">/ night</span>
+      <span class="monthly-discount">(15% monthly discount applied)</span>
     </div>
   </div>
 
   <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()" class="booking-form">
-    <!-- Date Selection -->
-    <div class="date-selection">
+    <!-- Month Selection -->
+    <div class="month-selection">
       <div class="form-group">
-        <label for="checkIn"><i class="fa fa-calendar"></i> Check-in</label>
+        <label for="bookingMonth"><i class="fa fa-calendar"></i> Select Month</label>
         <input
-          type="date"
-          id="checkIn"
-          formControlName="checkIn"
-          [min]="today"
+          type="month"
+          id="bookingMonth"
+          formControlName="bookingMonth"
+          [min]="currentMonth"
           [class.is-invalid]="
-            bookingForm.get('checkIn')?.invalid &&
-            bookingForm.get('checkIn')?.touched
+            bookingForm.get('bookingMonth')?.invalid &&
+            bookingForm.get('bookingMonth')?.touched
           "
         />
 
         <div
           class="validation-error"
           *ngIf="
-            bookingForm.get('checkIn')?.invalid &&
-            bookingForm.get('checkIn')?.touched
+            bookingForm.get('bookingMonth')?.invalid &&
+            bookingForm.get('bookingMonth')?.touched
           "
         >
-          Please select a check-in date
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="checkOut"> <i class="fa fa-calendar"></i> Check-out </label>
-        <input
-          type="date"
-          id="checkOut"
-          formControlName="checkOut"
-          [min]="getTomorrow(bookingForm.get('checkIn')?.value)"
-          [class.is-invalid]="
-            bookingForm.get('checkOut')?.invalid &&
-            bookingForm.get('checkOut')?.touched
-          "
-        />
-        <div
-          class="validation-error"
-          *ngIf="
-            bookingForm.get('checkOut')?.invalid &&
-            bookingForm.get('checkOut')?.touched
-          "
-        >
-          Please select a check-out date
+          Please select a booking month
         </div>
       </div>
     </div>
@@ -247,8 +225,8 @@
 
       <div *ngIf="!isCalculating && totalPrice > 0" class="price-breakdown">
         <div class="price-item">
-          <span>{{ property.price | currency }} x {{ nights }} nights</span>
-          <span>{{ property.price * nights | currency }}</span>
+          <span>{{ property.price | currency }} x {{ daysInMonth }} days (15% monthly discount)</span>
+          <span>{{ basePrice | currency }}</span>
         </div>
 
         <div class="price-item" *ngIf="property.cleaningFee">
@@ -258,7 +236,7 @@
 
         <div class="price-item">
           <span>Service fee</span>
-          <span>{{ property.price * nights * 0.1 | currency }}</span>
+          <span>{{ serviceFee | currency }}</span>
         </div>
 
         <div class="price-divider"></div>
@@ -273,7 +251,7 @@
     <!-- Availability Warning -->
     <div class="availability-warning" *ngIf="!isAvailable">
       <i class="fa fa-exclamation-triangle"></i>
-      <span>These dates are not available. Please select different dates.</span>
+      <span>This month is not available. Please select a different month.</span>
     </div>
 
     <!-- Form Messages -->

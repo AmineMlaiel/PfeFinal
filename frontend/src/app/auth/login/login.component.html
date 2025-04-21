@@ -99,7 +99,7 @@
                 class="text-sm font-medium text-indigo-600 hover:text-indigo-500"
               >
                 Forgot password?
-              </a>
+            </a>
             </div>
 
             <!-- Submit button -->
@@ -122,11 +122,11 @@
               <p class="text-sm text-gray-600">
                 Don't have an account?
                 <a
-                  routerLink="/signup"
-                  class="font-medium text-indigo-600 hover:text-indigo-500"
-                >
-                  Sign up now
-                </a>
+              [routerLink]="['/signup']"
+              class="font-medium text-indigo-600 hover:text-indigo-500"
+            >
+              Sign up now
+            </a>    
               </p>
             </div>
           </form>

@@ -25,7 +25,7 @@ export class AdminService {
   // Validate a user by changing their validation status
   validateUser(userId: string): Observable<any> {
     return this.http.put<any>(
-      `${this.apiUrl}/validate/${userId}`,
+      `${this.apiUrl}/${userId}/validate`,
       {},
       this.authService.getHttpOptions()
     ); // Update validation status
@@ -34,7 +34,7 @@ export class AdminService {
   // Update a user's details
   updateUser(userId: string, updatedUserData: any): Observable<any> {
     return this.http.put<any>(
-      `${this.apiUrl}/update/${userId}`,
+      `${this.apiUrl}/${userId}`,
       updatedUserData,
       this.authService.getHttpOptions()
     ); // Update user by ID
@@ -43,7 +43,7 @@ export class AdminService {
   // Delete a user
   deleteUser(userId: string): Observable<any> {
     return this.http.delete<any>(
-      `${this.apiUrl}/delete/${userId}`,
+      `${this.apiUrl}/${userId}`,
       this.authService.getHttpOptions()
     ); // Delete user by ID
   }

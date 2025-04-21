@@ -30,12 +30,14 @@ export class BookingFormComponent implements OnInit {
 
   // Price calculation
   totalPrice = 0;
-  nights = 0;
+  basePrice = 0;
+  serviceFee = 0;
+  daysInMonth = 0;
 
   // Availability check
   isAvailable = true;
   isCheckingAvailability = false;
-  minDate = new Date().toISOString().split('T')[0]; // Today's date as min date
+  currentMonth = new Date().toISOString().slice(0, 7); // Current month in YYYY-MM format
 
   // Booking processing states
   isProcessing = false;
@@ -56,20 +58,13 @@ export class BookingFormComponent implements OnInit {
   }
 
   initBookingForm(): void {
-    // Get tomorrow's date for default check-in
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // Get date after tomorrow for default check-out
-    const dayAfterTomorrow = new Date();
-    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+    // Get current month for default booking month
+    const currentDate = new Date();
+    const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    const nextMonthString = nextMonth.toISOString().slice(0, 7); // YYYY-MM format
 
     this.bookingForm = this.fb.group({
-      checkIn: [tomorrow.toISOString().split('T')[0], Validators.required],
-      checkOut: [
-        dayAfterTomorrow.toISOString().split('T')[0],
-        Validators.required,
-      ],
+      bookingMonth: [nextMonthString, Validators.required],
       guests: this.fb.group({
         adults: [
           1,
@@ -101,12 +96,9 @@ export class BookingFormComponent implements OnInit {
       }
     }
 
-    // Calculate price whenever check-in, check-out, or guests change
+    // Calculate price whenever booking month or guests change
     this.bookingForm
-      .get('checkIn')
-      ?.valueChanges.subscribe(() => this.updatePriceAndAvailability());
-    this.bookingForm
-      .get('checkOut')
+      .get('bookingMonth')
       ?.valueChanges.subscribe(() => this.updatePriceAndAvailability());
     this.bookingForm
       .get('guests.adults')
@@ -125,30 +117,26 @@ export class BookingFormComponent implements OnInit {
   }
 
   calculatePrice(): void {
-    const checkIn = this.bookingForm.get('checkIn')?.value;
-    const checkOut = this.bookingForm.get('checkOut')?.value;
+    const bookingMonth = this.bookingForm.get('bookingMonth')?.value;
     const guests = this.bookingForm.get('guests')?.value;
 
-    if (!checkIn || !checkOut || !this.property?._id) return;
+    if (!bookingMonth || !this.property?._id) return;
 
     this.isCalculating = true;
-
-    // Format dates to ISO string format for API
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
 
     this.bookingService
       .calculateBookingPrice(
         this.property._id,
-        checkInDate.toISOString(),
-        checkOutDate.toISOString(),
+        bookingMonth,
         guests
       )
       .subscribe({
         next: (response) => {
           if (response.success) {
             this.totalPrice = response.data.breakdown.totalPrice;
-            this.nights = response.data.breakdown.nights;
+            this.basePrice = response.data.breakdown.basePrice;
+            this.serviceFee = response.data.breakdown.serviceFee;
+            this.daysInMonth = response.data.breakdown.daysInMonth;
           } else {
             console.error('Failed to calculate price');
           }
@@ -162,22 +150,16 @@ export class BookingFormComponent implements OnInit {
   }
 
   checkAvailability(): void {
-    const checkIn = this.bookingForm.get('checkIn')?.value;
-    const checkOut = this.bookingForm.get('checkOut')?.value;
+    const bookingMonth = this.bookingForm.get('bookingMonth')?.value;
 
-    if (!checkIn || !checkOut || !this.property?._id) return;
+    if (!bookingMonth || !this.property?._id) return;
 
     this.isCheckingAvailability = true;
-
-    // Format dates to ISO string format for API
-    const checkInDate = new Date(checkIn);
-    const checkOutDate = new Date(checkOut);
 
     this.bookingService
       .checkAvailability(
         this.property._id,
-        checkInDate.toISOString(),
-        checkOutDate.toISOString()
+        bookingMonth
       )
       .subscribe({
         next: (response) => {
@@ -201,7 +183,7 @@ export class BookingFormComponent implements OnInit {
 
     if (!this.isAvailable) {
       this.errorMessage =
-        'Selected dates are not available. Please choose different dates.';
+        'Selected month is not available. Please choose a different month.';
       return;
     }
 
@@ -226,8 +208,7 @@ export class BookingFormComponent implements OnInit {
 
     const bookingData: Booking = {
       propertyId: this.property._id || '',
-      checkIn: new Date(this.bookingForm.get('checkIn')?.value).toISOString(),
-      checkOut: new Date(this.bookingForm.get('checkOut')?.value).toISOString(),
+      bookingMonth: this.bookingForm.get('bookingMonth')?.value,
       totalPrice: this.totalPrice,
       guests: this.bookingForm.get('guests')?.value,
       contactInfo: this.bookingForm.get('contactInfo')?.value,
@@ -267,17 +248,5 @@ export class BookingFormComponent implements OnInit {
         this.markFormGroupTouched(control);
       }
     });
-  }
-
-  // Get today's date formatted for min input
-  get today(): string {
-    return new Date().toISOString().split('T')[0];
-  }
-
-  // Get tomorrow's date formatted for min input
-  getTomorrow(date: string): string {
-    const selectedDate = new Date(date);
-    selectedDate.setDate(selectedDate.getDate() + 1);
-    return selectedDate.toISOString().split('T')[0];
   }
 }
