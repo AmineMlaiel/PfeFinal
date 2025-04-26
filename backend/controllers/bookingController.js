@@ -185,7 +185,7 @@ exports.getBooking = async (req, res) => {
         },
       })
       .populate({
-        path: "tenant",
+        path: "userId", // Use correct field name
         select: "name email mobileNumber",
       });
 
@@ -196,13 +196,13 @@ exports.getBooking = async (req, res) => {
       });
     }
 
-    // Make sure user is booking owner, property owner, or admin
     const property = await Property.findById(booking.property);
 
     if (
-      booking.tenant._id.toString() !== req.user.id &&
+      !booking.userId || 
+      (booking.userId._id.toString() !== req.user.id &&
       property.owner.toString() !== req.user.id &&
-      req.user.role !== "admin"
+      req.user.role !== "admin")
     ) {
       return res.status(401).json({
         success: false,
@@ -221,6 +221,7 @@ exports.getBooking = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Update booking status
 // @route   PUT /api/bookings/:id/status
