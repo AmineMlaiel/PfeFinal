@@ -17,6 +17,8 @@ import { PropertyAddComponent } from './property/property-add/property-add.compo
 import { PropertyUpdateComponent } from './property/property-update/property-update.component';
 import { MyPropertiesComponent } from './property/my-properties/my-properties.component';
 import { MyBookingsComponent } from './booking/my-bookings/my-bookings.component';
+import { OwnerDashboardComponent } from './property/owner-dashboard/owner-dashboard.component';
+
 
 // Auth Guard
 export const authGuard = () => {
@@ -68,5 +70,7 @@ export const routes: Routes = [
     component: PropertyUpdateComponent,
   },
   { path: 'property/:id', component: PropertyDetailsComponent },
+  { path: 'owner', component: OwnerDashboardComponent, },
+
   { path: '**', redirectTo: '' },
 ];

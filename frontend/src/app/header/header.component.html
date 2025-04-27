@@ -1,101 +1,79 @@
-<header class="main-header">
-  <div class="container">
-    <div class="logo" style="background-image: url('favicon-96x96.png'); background-size: contain; background-repeat: no-repeat; background-position: left center; padding-left: 40px;">
-      <a routerLink="/home" style="text-decoration: none; color: inherit;">Rentify</a>
+<header
+  class="fixed w-full z-50 transition-transform duration-300 bg-black/30 backdrop-blur-md"
+  [class.-translate-y-full]="!showHeader"
+>
+  <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <div class="flex items-center space-x-4">
+      <div
+        class="w-10 h-10 bg-no-repeat bg-contain bg-left"
+        style="background-image: url('favicon-96x96.png');"
+      ></div>
+      <a routerLink="/home" class="text-white text-2xl font-bold">Rentify</a>
     </div>
 
-    <nav class="main-nav">
-      <ul>
-        <li><a routerLink="/home" routerLinkActive="active">Home</a></li>
-        <li>
-          <a routerLink="/properties" routerLinkActive="active">Properties</a>
-        </li>
+    <nav class="hidden md:flex space-x-6 items-center">
+      <a routerLink="/home" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Home</a>
+      <a routerLink="/properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Properties</a>
 
-        @if (isLoggedIn) { @if (isOwner) {
-        <li>
-          <a routerLink="/properties/add" routerLinkActive="active"
-            >List a Property</a
-          >
-        </li>
-        <li>
-          <a routerLink="/properties/my-properties" routerLinkActive="active"
-            >My Properties</a
-          >
-        </li>
-        } @if (isAdmin) {
-        <li>
-          <a routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
-        </li>
-        <li>
-          <a routerLink="/admin/properties" routerLinkActive="active"
-            >Property Approvals</a
-          >
-        </li>
-        }
+      <!-- Admin Links -->
+      <ng-container *ngIf="isAdmin">
+        <a routerLink="/admin" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Admin Dashboard</a>
+        <a routerLink="/admin/properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Property Approvals</a>
+      </ng-container>
 
-        <li>
-          <a routerLink="/my-bookings" routerLinkActive="active">My Bookings</a>
-        </li>
+      <!-- Owner Links -->
+      <ng-container *ngIf="isOwner && isAdmin ">
+        <a routerLink="/properties/add" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">List a Property</a>
+        <a routerLink="/properties/my-properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">My Properties</a>
+      </ng-container>
 
-        <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
-        <li><button class="btn-logout" (click)="logout()">Logout</button></li>
-        } @else {
-        <li><a routerLink="/login" routerLinkActive="active">Login</a></li>
-        <li>
-          <a routerLink="/signup" routerLinkActive="active" class="btn-signup"
-            >Sign Up</a
-          >
-        </li>
-        }
-      </ul>
+      <a routerLink="/profile" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Profile</a>
+
+      <ng-container *ngIf="isLoggedIn">
+        <button (click)="logout()" class="text-red-500 border border-red-500 px-4 py-2 rounded hover:bg-red-500 hover:text-white transition">Logout</button>
+      </ng-container>
+
+      <!-- Login / Signup Links for Guests -->
+      <ng-container *ngIf="!isLoggedIn">
+        <a routerLink="/login" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Login</a>
+        <a routerLink="/signup" routerLinkActive="text-white" class="bg-blue-500 px-4 py-2 rounded hover:bg-blue-700 transition">Sign Up</a>
+      </ng-container>
     </nav>
 
-    <button class="mobile-menu-toggle" (click)="toggleMobileMenu()">
-      <span></span>
-      <span></span>
-      <span></span>
+    <!-- Mobile menu button -->
+    <button class="flex flex-col space-y-1 md:hidden" (click)="toggleMobileMenu()">
+      <span class="w-6 h-0.5 bg-white"></span>
+      <span class="w-6 h-0.5 bg-white"></span>
+      <span class="w-6 h-0.5 bg-white"></span>
     </button>
   </div>
 
-  <div class="mobile-menu" [class.active]="mobileMenuOpen">
-    <ul>
-      <li><a routerLink="/home" routerLinkActive="active">Home</a></li>
-      <li>
-        <a routerLink="/properties" routerLinkActive="active">Properties</a>
-      </li>
+  <!-- Mobile menu -->
+  <div *ngIf="mobileMenuOpen" class="md:hidden bg-black/90 backdrop-blur-md p-4 space-y-4">
+    <a routerLink="/home" class="block text-white hover:text-blue-400">Home</a>
+    <a routerLink="/properties" class="block text-white hover:text-blue-400">Properties</a>
 
-      @if (isLoggedIn) { @if (isOwner) {
-      <li>
-        <a routerLink="/properties/add" routerLinkActive="active"
-          >List a Property</a
-        >
-      </li>
-      <li>
-        <a routerLink="/properties/my-properties" routerLinkActive="active"
-          >My Properties</a
-        >
-      </li>
-      } @if (isAdmin) {
-      <li>
-        <a routerLink="/admin" routerLinkActive="active">Admin Dashboard</a>
-      </li>
-      <li>
-        <a routerLink="/admin/properties" routerLinkActive="active"
-          >Property Approvals</a
-        >
-      </li>
-      }
+    <!-- Admin Links (Mobile) -->
+    <ng-container *ngIf="isAdmin">
+      <a routerLink="/admin" class="block text-white hover:text-blue-400">Admin Dashboard</a>
+      <a routerLink="/admin/properties" class="block text-white hover:text-blue-400">Property Approvals</a>
+    </ng-container>
 
-      <li>
-        <a routerLink="/my-bookings" routerLinkActive="active">My Bookings</a>
-      </li>
+    <!-- Owner Links (Mobile) -->
+    <ng-container *ngIf="isOwner">
+      <a routerLink="/properties/add" class="block text-white hover:text-blue-400">List a Property</a>
+      <a routerLink="/properties/my-properties" class="block text-white hover:text-blue-400">My Properties</a>
+    </ng-container>
 
-      <li><a routerLink="/profile" routerLinkActive="active">Profile</a></li>
-      <li><button class="btn-logout" (click)="logout()">Logout</button></li>
-      } @else {
-      <li><a routerLink="/login" routerLinkActive="active">Login</a></li>
-      <li><a routerLink="/signup" routerLinkActive="active">Sign Up</a></li>
-      }
-    </ul>
+    <a routerLink="/profile" class="block text-white hover:text-blue-400">Profile</a>
+
+    <ng-container *ngIf="isLoggedIn">
+      <button (click)="logout()" class="w-full text-left text-red-500 hover:text-white">Logout</button>
+    </ng-container>
+
+    <ng-container *ngIf="!isLoggedIn">
+      <a routerLink="/login" class="block text-white hover:text-blue-400">Login</a>
+      <a routerLink="/signup" class="block text-white hover:bg-blue-700 bg-blue-500 px-4 py-2 rounded">Sign Up</a>
+    </ng-container>
   </div>
 </header>
