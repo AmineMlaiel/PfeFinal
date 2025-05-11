@@ -4,34 +4,65 @@
     <div class="price-info">
       <span class="price">{{ property.price | currency }} </span>
       <span class="per-night">/ night</span>
-      <span class="monthly-discount">(15% monthly discount applied)</span>
+      <span class="monthly-discount" *ngIf="isMonthView">(15% monthly discount applied)</span>
     </div>
   </div>
 
   <form [formGroup]="bookingForm" (ngSubmit)="onSubmit()" class="booking-form">
+    <!-- Booking Type Toggle -->
+    <div class="booking-type-toggle">
+      <div class="toggle-buttons">
+        <button 
+          type="button" 
+          [class.active]="isMonthView" 
+          (click)="onViewChanged('month')"
+        >
+          Monthly Booking
+        </button>
+        <button 
+          type="button" 
+          [class.active]="!isMonthView" 
+          (click)="onViewChanged('day')"
+        >
+          Daily Booking
+        </button>
+      </div>
+    </div>
+
     <!-- Month Selection -->
-    <div class="month-selection">
+    <div class="month-selection" *ngIf="isMonthView">
       <div class="form-group">
-        <label for="bookingMonth"><i class="fa fa-calendar"></i> Select Month</label>
+        <label for="bookingMonth">
+          <fa-icon [icon]="icons.calendar"></fa-icon> Select Month
+        </label>
         <input
           type="month"
           id="bookingMonth"
           formControlName="bookingMonth"
           [min]="currentMonth"
-          [class.is-invalid]="
-            bookingForm.get('bookingMonth')?.invalid &&
-            bookingForm.get('bookingMonth')?.touched
-          "
+          [class.is-invalid]="bookingForm.get('bookingMonth')?.invalid && bookingForm.get('bookingMonth')?.touched"
         />
-
-        <div
-          class="validation-error"
-          *ngIf="
-            bookingForm.get('bookingMonth')?.invalid &&
-            bookingForm.get('bookingMonth')?.touched
-          "
-        >
+        <div class="validation-error" *ngIf="bookingForm.get('bookingMonth')?.invalid && bookingForm.get('bookingMonth')?.touched">
           Please select a booking month
+        </div>
+      </div>
+    </div>
+
+    <!-- Date Selection -->
+    <div class="date-selection" *ngIf="!isMonthView">
+      <div class="form-group">
+        <label for="bookingDate">
+          <fa-icon [icon]="icons.calendar"></fa-icon> Select Date
+        </label>
+        <input
+          type="date"
+          id="bookingDate"
+          formControlName="bookingDate"
+          [min]="currentMonth + '-01'"
+          [class.is-invalid]="bookingForm.get('bookingDate')?.invalid && bookingForm.get('bookingDate')?.touched"
+        />
+        <div class="validation-error" *ngIf="bookingForm.get('bookingDate')?.invalid && bookingForm.get('bookingDate')?.touched">
+          Please select a booking date
         </div>
       </div>
     </div>
@@ -39,23 +70,16 @@
     <!-- Guest Selection -->
     <div formGroupName="guests" class="guest-selection">
       <div class="form-group">
-        <label for="adults">Adults</label>
+        <label for="adults">
+          <fa-icon [icon]="icons.user"></fa-icon> Adults
+        </label>
         <div class="number-input">
           <button
             type="button"
-            (click)="
-              bookingForm
-                .get('guests.adults')
-                ?.setValue(
-                  Math.max(
-                    1,
-                    (bookingForm.get('guests.adults')?.value || 1) - 1
-                  )
-                )
-            "
+            (click)="adjustGuests('adults', -1)"
             [disabled]="bookingForm.get('guests.adults')?.value <= 1"
           >
-            <i class="fa fa-minus"></i>
+            <fa-icon [icon]="icons.minus"></fa-icon>
           </button>
           <input
             type="number"
@@ -63,44 +87,29 @@
             formControlName="adults"
             min="1"
             max="10"
+            readonly
           />
           <button
             type="button"
-            (click)="
-              bookingForm
-                .get('guests.adults')
-                ?.setValue(
-                  Math.min(
-                    10,
-                    (bookingForm.get('guests.adults')?.value || 1) + 1
-                  )
-                )
-            "
+            (click)="adjustGuests('adults', 1)"
             [disabled]="bookingForm.get('guests.adults')?.value >= 10"
           >
-            <i class="fa fa-plus"></i>
+            <fa-icon [icon]="icons.plus"></fa-icon>
           </button>
         </div>
       </div>
 
       <div class="form-group">
-        <label for="children">Children</label>
+        <label for="children">
+          <fa-icon [icon]="icons.user"></fa-icon> Children
+        </label>
         <div class="number-input">
           <button
             type="button"
-            (click)="
-              bookingForm
-                .get('guests.children')
-                ?.setValue(
-                  Math.max(
-                    0,
-                    (bookingForm.get('guests.children')?.value || 0) - 1
-                  )
-                )
-            "
+            (click)="adjustGuests('children', -1)"
             [disabled]="bookingForm.get('guests.children')?.value <= 0"
           >
-            <i class="fa fa-minus"></i>
+            <fa-icon [icon]="icons.minus"></fa-icon>
           </button>
           <input
             type="number"
@@ -108,22 +117,14 @@
             formControlName="children"
             min="0"
             max="6"
+            readonly
           />
           <button
             type="button"
-            (click)="
-              bookingForm
-                .get('guests.children')
-                ?.setValue(
-                  Math.min(
-                    6,
-                    (bookingForm.get('guests.children')?.value || 0) + 1
-                  )
-                )
-            "
+            (click)="adjustGuests('children', 1)"
             [disabled]="bookingForm.get('guests.children')?.value >= 6"
           >
-            <i class="fa fa-plus"></i>
+            <fa-icon [icon]="icons.plus"></fa-icon>
           </button>
         </div>
       </div>
@@ -140,64 +141,41 @@
           id="name"
           formControlName="name"
           placeholder="Enter your full name"
-          [class.is-invalid]="
-            bookingForm.get('contactInfo.name')?.invalid &&
-            bookingForm.get('contactInfo.name')?.touched
-          "
+          [class.is-invalid]="bookingForm.get('contactInfo.name')?.invalid && bookingForm.get('contactInfo.name')?.touched"
         />
-        <div
-          class="validation-error"
-          *ngIf="
-            bookingForm.get('contactInfo.name')?.invalid &&
-            bookingForm.get('contactInfo.name')?.touched
-          "
-        >
+        <div class="validation-error" *ngIf="bookingForm.get('contactInfo.name')?.invalid && bookingForm.get('contactInfo.name')?.touched">
           Please enter your name
         </div>
       </div>
 
       <div class="form-group">
-        <label for="email">Email</label>
+        <label for="email">
+          <fa-icon [icon]="icons.email"></fa-icon> Email
+        </label>
         <input
           type="email"
           id="email"
           formControlName="email"
           placeholder="Enter your email address"
-          [class.is-invalid]="
-            bookingForm.get('contactInfo.email')?.invalid &&
-            bookingForm.get('contactInfo.email')?.touched
-          "
+          [class.is-invalid]="bookingForm.get('contactInfo.email')?.invalid && bookingForm.get('contactInfo.email')?.touched"
         />
-        <div
-          class="validation-error"
-          *ngIf="
-            bookingForm.get('contactInfo.email')?.invalid &&
-            bookingForm.get('contactInfo.email')?.touched
-          "
-        >
+        <div class="validation-error" *ngIf="bookingForm.get('contactInfo.email')?.invalid && bookingForm.get('contactInfo.email')?.touched">
           Please enter a valid email address
         </div>
       </div>
 
       <div class="form-group">
-        <label for="phone">Phone</label>
+        <label for="phone">
+          <fa-icon [icon]="icons.phone"></fa-icon> Phone
+        </label>
         <input
           type="tel"
           id="phone"
           formControlName="phone"
           placeholder="Enter your phone number"
-          [class.is-invalid]="
-            bookingForm.get('contactInfo.phone')?.invalid &&
-            bookingForm.get('contactInfo.phone')?.touched
-          "
+          [class.is-invalid]="bookingForm.get('contactInfo.phone')?.invalid && bookingForm.get('contactInfo.phone')?.touched"
         />
-        <div
-          class="validation-error"
-          *ngIf="
-            bookingForm.get('contactInfo.phone')?.invalid &&
-            bookingForm.get('contactInfo.phone')?.touched
-          "
-        >
+        <div class="validation-error" *ngIf="bookingForm.get('contactInfo.phone')?.invalid && bookingForm.get('contactInfo.phone')?.touched">
           Please enter your phone number
         </div>
       </div>
@@ -219,19 +197,15 @@
       <h4>Price Details</h4>
 
       <div *ngIf="isCalculating" class="loading-price">
-        <div class="spinner-sm"></div>
+        <div class="spinner"></div>
         <p>Calculating price...</p>
       </div>
 
       <div *ngIf="!isCalculating && totalPrice > 0" class="price-breakdown">
         <div class="price-item">
-          <span>{{ property.price | currency }} x {{ daysInMonth }} days (15% monthly discount)</span>
+          <span *ngIf="isMonthView">{{ property.price | currency }} x {{ daysInMonth }} days (15% monthly discount)</span>
+          <span *ngIf="!isMonthView">{{ property.price | currency }} x 1 day</span>
           <span>{{ basePrice | currency }}</span>
-        </div>
-
-        <div class="price-item" *ngIf="property.cleaningFee">
-          <span>Cleaning fee</span>
-          <span>{{ property.cleaningFee | currency }}</span>
         </div>
 
         <div class="price-item">
@@ -250,18 +224,19 @@
 
     <!-- Availability Warning -->
     <div class="availability-warning" *ngIf="!isAvailable">
-      <i class="fa fa-exclamation-triangle"></i>
-      <span>This month is not available. Please select a different month.</span>
+      <fa-icon [icon]="icons.warning"></fa-icon>
+      <span *ngIf="isMonthView">This month is not available. Please select a different month.</span>
+      <span *ngIf="!isMonthView">This date is not available. Please select a different date.</span>
     </div>
 
     <!-- Form Messages -->
     <div class="form-message error-message" *ngIf="errorMessage">
-      <i class="fa fa-exclamation-circle"></i>
+      <fa-icon [icon]="icons.error"></fa-icon>
       <span>{{ errorMessage }}</span>
     </div>
 
     <div class="form-message success-message" *ngIf="successMessage">
-      <i class="fa fa-check-circle"></i>
+      <fa-icon [icon]="icons.success"></fa-icon>
       <span>{{ successMessage }}</span>
     </div>
 
@@ -269,22 +244,12 @@
     <button
       type="submit"
       class="btn-book"
-      [disabled]="
-        bookingForm.invalid ||
-        isProcessing ||
-        !isAvailable ||
-        isCalculating ||
-        isCheckingAvailability
-      "
+      [disabled]="bookingForm.invalid || isProcessing || !isAvailable || isCalculating || isCheckingAvailability"
     >
-      <span *ngIf="!isProcessing && !isCalculating && !isCheckingAvailability"
-        >Book Now</span
-      >
+      <span *ngIf="!isProcessing && !isCalculating && !isCheckingAvailability">Book Now</span>
       <span *ngIf="isProcessing">Processing...</span>
       <span *ngIf="isCalculating && !isProcessing">Calculating Price...</span>
-      <span *ngIf="isCheckingAvailability && !isProcessing"
-        >Checking Availability...</span
-      >
+      <span *ngIf="isCheckingAvailability && !isProcessing">Checking Availability...</span>
     </button>
   </form>
 </div>

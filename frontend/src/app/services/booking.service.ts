@@ -109,18 +109,21 @@ export class BookingService {
   }
 
   // Check if a property is available for specific month - updated for monthly booking
-  checkAvailability(
-    propertyId: string,
-    bookingMonth: string
-  ): Observable<{
+ checkAvailability(
+  propertyId: string,
+   bookingMonth: string | null,
+  bookingDate: string | null
+): Observable<{
+  success: boolean;
+  isAvailable: boolean;
+  message?: string;
+}> {
+  return this.http.post<{
     success: boolean;
     isAvailable: boolean;
-    message: string;
-  }> {
-    return this.http.post<{
-      success: boolean;
-      isAvailable: boolean;
-      message: string;
-    }>(`${this.apiUrl}/check-availability`, { propertyId, bookingMonth });
-  }
-}
+    message?: string;
+  }>(
+    `${this.apiUrl}/check-availability`,
+    { propertyId, bookingMonth, bookingDate }
+  );
+}}
