@@ -15,6 +15,11 @@
       <a routerLink="/home" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Home</a>
       <a routerLink="/properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Properties</a>
 
+      <!-- My Booking for all logged in users -->
+      <ng-container *ngIf="isLoggedIn">
+        <a routerLink="/booking/my-bookings" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">My Booking</a>
+      </ng-container>
+
       <!-- Admin Links -->
       <ng-container *ngIf="isAdmin">
         <a routerLink="/admin" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Admin Dashboard</a>
@@ -23,7 +28,7 @@
 
       <!-- Owner Links -->
       <ng-container *ngIf="isOwner && !isAdmin">
-        <a routerLink="/properties/add" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Add a Property</a>
+        <a routerLink="/properties/add" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">List a Property</a>
         <a routerLink="/properties/my-properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">My Properties</a>
       </ng-container>
 
@@ -60,7 +65,11 @@
   >
     <a routerLink="/home" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Home</a>
     <a routerLink="/properties" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Properties</a>
-    <a routerLink="../bookign/my-bookings" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">My Booking</a>
+
+    <!-- My Booking for all logged in users (Mobile) -->
+    <ng-container *ngIf="isLoggedIn">
+      <a routerLink="my-bookings" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">My Booking</a>
+    </ng-container>
 
     <!-- Admin Links (Mobile) -->
     <ng-container *ngIf="isAdmin">
