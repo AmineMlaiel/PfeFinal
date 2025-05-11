@@ -1,50 +1,67 @@
 import { Component, OnInit, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  FormsModule,
-  ReactiveFormsModule,
-  FormBuilder,
-  FormGroup,
-  Validators,
-} from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { BookingService } from '../../services/booking.service';
 import { AuthService } from '../../auth/auth.service';
 import { Property } from '../../models/property.model';
 import { Booking } from '../../models/booking.model';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import Swal from 'sweetalert2';
+import { faCalendar, faUser, faEnvelope, faPhone, faExclamationTriangle, faExclamationCircle, faCheckCircle, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-booking-form',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    ReactiveFormsModule,
+    FontAwesomeModule
+  ],
   templateUrl: './booking-form.component.html',
   styleUrl: './booking-form.component.scss',
 })
-export class BookingFormComponent implements OnInit {
+export class BookingFormComponent implements OnInit{ 
   @Input() property!: Property;
 
+  // Icons
+  icons = {
+    calendar: faCalendar,
+    user: faUser,
+    email: faEnvelope,
+    phone: faPhone,
+    warning: faExclamationTriangle,
+    error: faExclamationCircle,
+    success: faCheckCircle,
+    minus: faMinus,
+    plus: faPlus
+  };
+
+  // Form
   bookingForm!: FormGroup;
   isLoading = false;
   errorMessage = '';
   successMessage = '';
+  isProcessing = false;
+  isCalculating = false;
+  isCheckingAvailability = false;
+  isAvailable = true;
 
-  // Price calculation
+  // View state
+  isMonthView = true;
+
+  // Pricing
   totalPrice = 0;
   basePrice = 0;
   serviceFee = 0;
   daysInMonth = 0;
 
-  // Availability check
-  isAvailable = true;
-  isCheckingAvailability = false;
-  currentMonth = new Date().toISOString().slice(0, 7); // Current month in YYYY-MM format
+  // Dates
+  currentMonth = new Date().toISOString().slice(0, 7);
+  selectedDate: string = '';
+  canSubmitBooking = false; // add this property
 
-  // Booking processing states
-  isProcessing = false;
-  isCalculating = false;
-
-  // Make Math available in template
-  Math = Math;
 
   constructor(
     private fb: FormBuilder,
@@ -55,35 +72,52 @@ export class BookingFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.initBookingForm();
+    this.authService.getCurrentUser().subscribe(user => {
+  if (user && user.isVerified === true) {
+    this.canSubmitBooking = true;
+  } else {
+    this.canSubmitBooking = false;
+  }
+});
+
   }
 
+
   initBookingForm(): void {
-    // Get current month for default booking month
     const currentDate = new Date();
     const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
-    const nextMonthString = nextMonth.toISOString().slice(0, 7); // YYYY-MM format
+    const nextMonthString = nextMonth.toISOString().slice(0, 7);
+    const today = new Date().toISOString().slice(0, 10);
 
     this.bookingForm = this.fb.group({
       bookingMonth: [nextMonthString, Validators.required],
+      bookingDate: [today, Validators.required],
       guests: this.fb.group({
-        adults: [
-          1,
-          [Validators.required, Validators.min(1), Validators.max(10)],
-        ],
-        children: [
-          0,
-          [Validators.required, Validators.min(0), Validators.max(6)],
-        ],
+        adults: [1, [Validators.required, Validators.min(1), Validators.max(10)]],
+        children: [0, [Validators.required, Validators.min(0), Validators.max(6)]]
       }),
       contactInfo: this.fb.group({
         name: ['', Validators.required],
         email: ['', [Validators.required, Validators.email]],
-        phone: ['', Validators.required],
+        phone: ['', Validators.required]
       }),
-      specialRequests: [''],
+      specialRequests: ['']
     });
 
-    // Pre-fill contact info if user is logged in
+    this.prefillUserInfo();
+    this.setupFormListeners();
+    this.updatePriceAndAvailability();
+  }
+
+  private setupFormListeners(): void {
+    this.bookingForm.get('bookingMonth')?.valueChanges.subscribe(() => this.updatePriceAndAvailability());
+    this.bookingForm.get('bookingDate')?.valueChanges.subscribe(() => {
+      if (!this.isMonthView) this.updatePriceAndAvailability();
+    });
+    this.bookingForm.get('guests')?.valueChanges.subscribe(() => this.calculatePrice());
+  }
+
+  prefillUserInfo(): void {
     if (this.authService.isLoggedIn()) {
       const user = this.authService.getUser();
       if (user) {
@@ -91,24 +125,29 @@ export class BookingFormComponent implements OnInit {
           contactInfo: {
             name: user.name || '',
             email: user.email || '',
-          },
+            phone: user.phone || ''
+          }
         });
       }
     }
+  }
 
-    // Calculate price whenever booking month or guests change
-    this.bookingForm
-      .get('bookingMonth')
-      ?.valueChanges.subscribe(() => this.updatePriceAndAvailability());
-    this.bookingForm
-      .get('guests.adults')
-      ?.valueChanges.subscribe(() => this.calculatePrice());
-    this.bookingForm
-      .get('guests.children')
-      ?.valueChanges.subscribe(() => this.calculatePrice());
-
-    // Initial price calculation
+  onViewChanged(view: 'day' | 'month'): void {
+    this.isMonthView = view === 'month';
+    this.updateValidators();
     this.updatePriceAndAvailability();
+  }
+
+  private updateValidators(): void {
+    if (this.isMonthView) {
+      this.bookingForm.get('bookingMonth')?.setValidators(Validators.required);
+      this.bookingForm.get('bookingDate')?.clearValidators();
+    } else {
+      this.bookingForm.get('bookingDate')?.setValidators(Validators.required);
+      this.bookingForm.get('bookingMonth')?.clearValidators();
+    }
+    this.bookingForm.get('bookingMonth')?.updateValueAndValidity();
+    this.bookingForm.get('bookingDate')?.updateValueAndValidity();
   }
 
   updatePriceAndAvailability(): void {
@@ -117,136 +156,201 @@ export class BookingFormComponent implements OnInit {
   }
 
   calculatePrice(): void {
-    const bookingMonth = this.bookingForm.get('bookingMonth')?.value;
-    const guests = this.bookingForm.get('guests')?.value;
-
+    const bookingMonth = this.getBookingMonth();
     if (!bookingMonth || !this.property?._id) return;
 
     this.isCalculating = true;
+    const guests = this.bookingForm.get('guests')?.value;
 
-    this.bookingService
-      .calculateBookingPrice(
-        this.property._id,
-        bookingMonth,
-        guests
-      )
-      .subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.totalPrice = response.data.breakdown.totalPrice;
-            this.basePrice = response.data.breakdown.basePrice;
-            this.serviceFee = response.data.breakdown.serviceFee;
-            this.daysInMonth = response.data.breakdown.daysInMonth;
-          } else {
-            console.error('Failed to calculate price');
-          }
-          this.isCalculating = false;
-        },
-        error: (err) => {
-          console.error('Error calculating price:', err);
-          this.isCalculating = false;
-        },
-      });
+    this.bookingService.calculateBookingPrice(this.property._id, bookingMonth, guests).subscribe({
+      next: (response) => {
+        if (response.success && response.data?.breakdown) {
+          this.totalPrice = response.data.breakdown.totalPrice;
+          this.basePrice = response.data.breakdown.basePrice;
+          this.serviceFee = response.data.breakdown.serviceFee;
+          this.daysInMonth = this.isMonthView ? response.data.breakdown.daysInMonth || 0 : 1;
+        }
+        this.isCalculating = false;
+      },
+      error: (err) => {
+        console.error('Error calculating price:', err);
+        this.isCalculating = false;
+      }
+    });
   }
 
   checkAvailability(): void {
-    const bookingMonth = this.bookingForm.get('bookingMonth')?.value;
+    const bookingMonth = this.getBookingMonth();
+    const bookingDate = this.isMonthView ? null : this.bookingForm.get('bookingDate')?.value;
 
-    if (!bookingMonth || !this.property?._id) return;
+    if (!this.property?._id || (this.isMonthView && !bookingMonth) || (!this.isMonthView && !bookingDate)) return;
 
     this.isCheckingAvailability = true;
 
-    this.bookingService
-      .checkAvailability(
-        this.property._id,
-        bookingMonth
-      )
-      .subscribe({
-        next: (response) => {
-          this.isAvailable = response.isAvailable;
-          this.isCheckingAvailability = false;
-        },
-        error: (err) => {
-          console.error('Error checking availability:', err);
-          this.isAvailable = false;
-          this.isCheckingAvailability = false;
-        },
-      });
+    this.bookingService.checkAvailability(
+      this.property._id,
+      bookingMonth,
+      bookingDate
+    ).subscribe({
+      next: (response) => {
+        this.isAvailable = response.isAvailable;
+        this.isCheckingAvailability = false;
+      },
+      error: (err) => {
+        console.error('Error checking availability:', err);
+        this.isAvailable = false;
+        this.isCheckingAvailability = false;
+      }
+    });
   }
+  
+handleBookingClick(): void {
+  if (
+    this.bookingForm.invalid ||
+    this.isProcessing ||
+    !this.isAvailable ||
+    this.isCalculating ||
+    this.isCheckingAvailability
+  ) {
+    return;
+  }
+
+  if (!this.canSubmitBooking) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Account not validated',
+      text: 'You must validate your account before submitting a booking.',
+      confirmButtonText: 'Got it'
+    });
+    return;
+  }
+
+  this.onSubmit();
+}
+
 
   onSubmit(): void {
     if (this.bookingForm.invalid) {
-      // Mark all fields as touched to trigger validation messages
       this.markFormGroupTouched(this.bookingForm);
       return;
     }
+    if (!this.canSubmitBooking) {
+  alert('Your account must be validated before making a booking.');
+  return;
+}
 
     if (!this.isAvailable) {
-      this.errorMessage =
-        'Selected month is not available. Please choose a different month.';
+      this.errorMessage = this.isMonthView
+        ? 'Selected month is not available. Please choose a different month.'
+        : 'Selected date is not available. Please choose a different date.';
       return;
     }
 
     if (!this.authService.isLoggedIn()) {
-      // Redirect to login and store booking intent
-      localStorage.setItem(
-        'bookingIntent',
-        JSON.stringify({
-          propertyId: this.property._id,
-          formData: this.bookingForm.value,
-        })
-      );
+      this.saveBookingIntent();
       this.router.navigate(['/login'], {
-        queryParams: { returnUrl: `/properties/${this.property._id}` },
+        queryParams: { returnUrl: `/properties/${this.property._id}` }
       });
       return;
     }
 
+    this.processBooking();
+  }
+
+  private processBooking(): void {
     this.isProcessing = true;
     this.errorMessage = '';
     this.successMessage = '';
 
-    const bookingData: Booking = {
-      propertyId: this.property._id || '',
-      bookingMonth: this.bookingForm.get('bookingMonth')?.value,
-      totalPrice: this.totalPrice,
-      guests: this.bookingForm.get('guests')?.value,
-      contactInfo: this.bookingForm.get('contactInfo')?.value,
-      specialRequests: this.bookingForm.get('specialRequests')?.value,
-      status: 'pending',
-    };
+    const bookingData = this.buildBookingData();
 
     this.bookingService.createBooking(bookingData).subscribe({
       next: (response) => {
         if (response.success) {
-          this.successMessage = 'Booking request submitted successfully!';
-          // Reset form after successful booking
-          this.bookingForm.reset();
-          this.initBookingForm();
+          this.handleBookingSuccess();
         } else {
-          this.errorMessage =
-            response.message || 'Failed to create booking. Please try again.';
+          this.errorMessage = response.message || 'Failed to create booking. Please try again.';
         }
         this.isProcessing = false;
       },
       error: (err) => {
-        console.error('Error creating booking:', err);
-        this.errorMessage =
-          err.error?.message ||
-          'An error occurred while processing your booking. Please try again.';
+        this.handleBookingError(err);
         this.isProcessing = false;
-      },
+      }
     });
   }
 
-  // Helper to mark all form controls as touched
-  markFormGroupTouched(formGroup: FormGroup): void {
-    Object.values(formGroup.controls).forEach((control) => {
-      control.markAsTouched();
+  private handleBookingSuccess(): void {
+    this.successMessage = 'Booking request submitted successfully!';
+    this.bookingForm.reset();
+    this.initBookingForm();
+  }
 
+  private handleBookingError(err: any): void {
+    console.error('Error creating booking:', err);
+    this.errorMessage = err.error?.message ||
+      'An error occurred while processing your booking. Please try again.';
+  }
+
+  private saveBookingIntent(): void {
+    localStorage.setItem('bookingIntent', JSON.stringify({
+      propertyId: this.property._id,
+      formData: this.bookingForm.value,
+      isMonthView: this.isMonthView
+    }));
+  }
+
+  private buildBookingData(): Booking {
+    return {
+      propertyId: this.property._id ?? '',
+      bookingMonth: this.isMonthView ? this.bookingForm.get('bookingMonth')?.value : null,
+      bookingDate: this.isMonthView ? null : this.bookingForm.get('bookingDate')?.value,
+      isMonthlyBooking: this.isMonthView,
+      totalPrice: this.totalPrice,
+      guests: this.bookingForm.get('guests')?.value,
+      contactInfo: this.bookingForm.get('contactInfo')?.value,
+      specialRequests: this.bookingForm.get('specialRequests')?.value,
+      status: 'pending'
+    };
+  }
+
+ private getBookingMonth(): string {
+  if (this.isMonthView) {
+    return this.bookingForm.get('bookingMonth')?.value || '';
+  } else {
+    const dateValue = this.bookingForm.get('bookingDate')?.value;
+    let dateString = '';
+
+    if (dateValue instanceof Date) {
+      // Convert Date to ISO string (YYYY-MM-DD)
+      dateString = dateValue.toISOString().slice(0, 10);
+    } else if (typeof dateValue === 'string') {
+      dateString = dateValue.slice(0, 10);
+    }
+
+    return dateString.slice(0, 7); // YYYY-MM
+  }
+}
+
+  markFormGroupTouched(formGroup: FormGroup): void {
+    Object.values(formGroup.controls).forEach(control => {
+      control.markAsTouched();
       if (control instanceof FormGroup) {
         this.markFormGroupTouched(control);
       }
     });
+  }
+
+  adjustGuests(field: 'adults' | 'children', amount: number): void {
+    const control = this.bookingForm.get(`guests.${field}`);
+    if (control) {
+      const newValue = control.value + amount;
+      if (
+        (field === 'adults' && newValue >= 1 && newValue <= 10) ||
+        (field === 'children' && newValue >= 0 && newValue <= 6)
+      ) {
+        control.setValue(newValue);
+      }
+    }
   }
 }

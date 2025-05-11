@@ -9,20 +9,105 @@ const path = require("path");
 // @access  Private (Owners and Admins)
 exports.createProperty = async (req, res) => {
   try {
-    // Set owner to currently logged in user
-    req.body.owner = req.user._id;
+    // Assuming your authentication middleware (e.g., authMiddleware) adds the user object to req.user
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated. Please log in to create a property.",
+      });
+    }
 
-    // Create property
-    const property = await Property.create(req.body);
+    const {
+      title,
+      description,
+      address,
+      propertyType,
+      pricePerNight, // Required
+      pricePerMonth, // Optional
+      bedrooms,
+      bathrooms,
+      area,
+      // images will be handled in a separate upload step usually, or passed as URLs if already uploaded
+      features,
+      availability,
+      location, // Expecting { type: "Point", coordinates: [longitude, latitude] }
+      cleaningFee,
+      additionalGuestFee,
+      baseGuests,
+      // other fields from your schema like isApproved, isActive, status might be set by admin or have defaults
+    } = req.body;
+
+    // Basic validation for required fields not covered by Mongoose schema defaults or explicit requirements
+    // Mongoose schema validation will handle most of this, but early checks can be useful.
+    if (!title || !description || !address || !propertyType || pricePerNight === undefined || !bedrooms || !bathrooms || !area || !availability || !location) {
+        let missingFields = [];
+        if (!title) missingFields.push("title");
+        if (!description) missingFields.push("description");
+        if (!address) missingFields.push("address (street, city, state, zipCode, country)");
+        if (!propertyType) missingFields.push("propertyType");
+        if (pricePerNight === undefined) missingFields.push("pricePerNight");
+        if (!bedrooms) missingFields.push("bedrooms");
+        if (!bathrooms) missingFields.push("bathrooms");
+        if (!area) missingFields.push("area");
+        if (!availability) missingFields.push("availability (availableFrom)");
+        if (!location) missingFields.push("location (coordinates)");
+
+      return res.status(400).json({
+        success: false,
+        message: `Missing required fields: ${missingFields.join(", ")}`,
+      });
+    }
+
+    const propertyData = {
+      title,
+      description,
+      address,
+      propertyType,
+      pricePerNight,
+      bedrooms,
+      bathrooms,
+      area,
+      features: features || [],
+      availability,
+      location,
+      owner: req.user.id, // Set the owner from the authenticated user
+      // Optional fields - only add them if they are provided and valid
+      ...(pricePerMonth !== undefined && pricePerMonth !== null && !isNaN(parseFloat(pricePerMonth)) && parseFloat(pricePerMonth) > 0 && { pricePerMonth: parseFloat(pricePerMonth) }),
+      ...(cleaningFee !== undefined && !isNaN(parseFloat(cleaningFee)) && { cleaningFee: parseFloat(cleaningFee) }),
+      ...(additionalGuestFee !== undefined && !isNaN(parseFloat(additionalGuestFee)) && { additionalGuestFee: parseFloat(additionalGuestFee) }),
+      ...(baseGuests !== undefined && !isNaN(parseInt(baseGuests)) && { baseGuests: parseInt(baseGuests) }),
+      // Default status for new properties, e.g., "pending" for admin approval
+      status: "pending", // Or whatever your default status is
+      isApproved: false, // Typically new properties require approval
+      isActive: true, // Can be set to true by default
+    };
+
+    const newProperty = new Property(propertyData);
+    const savedProperty = await newProperty.save(); // Mongoose handles schema validation here
 
     res.status(201).json({
       success: true,
-      data: property,
+      message: "Property created successfully. It may require admin approval before being listed.",
+      data: savedProperty,
     });
+
   } catch (error) {
-    res.status(400).json({
+    console.error("Error creating property:", error);
+
+    if (error.name === "ValidationError") {
+      // Construct a user-friendly error message from Mongoose validation errors
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        success: false,
+        message: "Validation failed. Please check your input.",
+        errors: messages,
+      });
+    }
+
+    // Handle other potential errors (e.g., database connection issues)
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to create property due to a server error. Please try again later.",
     });
   }
 };

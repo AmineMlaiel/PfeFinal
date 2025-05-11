@@ -140,7 +140,9 @@
           <!-- Show booking month instead of check-in/check-out dates -->
           <div class="date-item">
             <span class="date-label">Booking Month:</span>
-            <span class="date-value">{{ formatMonth(booking.bookingMonth) }}</span>
+            <span class="date-value">
+          {{ booking.bookingMonth ? formatMonth(booking.bookingMonth) : '—' }}
+          </span>
           </div>
           <!-- Keep check-in/check-out for backward compatibility -->
           <div class="date-item" *ngIf="!booking.bookingMonth && booking.checkIn">

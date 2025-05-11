@@ -1,19 +1,32 @@
+// Interface for guest count
+export interface Guest {
+  adults: number;
+  children: number;
+}
+
+// Interface for price breakdown returned by backend
+export interface PriceBreakdown {
+  basePrice: number;
+  daysInMonth?: number;
+  monthlyDiscount?: string;
+  additionalGuestFee: number;
+  cleaningFee: number;
+  serviceFee: number;
+  totalPrice: number;
+}
+
+// Main Booking interface (used throughout the app)
 export interface Booking {
   _id?: string;
   propertyId: string;
   userId?: string;
-  // Added for monthly booking
-  bookingMonth: Date | string;
-  // Keep for backward compatibility
-  checkIn?: Date | string;
-  checkOut?: Date | string;
+  bookingMonth?: string | null;
+  bookingDate?: string | null;
+  isMonthlyBooking: boolean;
   totalPrice: number;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  guests: {
-    adults: number;
-    children: number;
-  };
-  contactInfo?: {
+  guests: Guest;
+  contactInfo: {
     name: string;
     email: string;
     phone: string;
@@ -21,6 +34,13 @@ export interface Booking {
   specialRequests?: string;
   createdAt?: Date | string;
   updatedAt?: Date | string;
+
+  // Properties used in my-bookings.component.ts
+  checkIn?: string | Date;
+  checkOut?: string | Date;
+  canDelete?: boolean;
+
+  // For display purposes
   property?: {
     _id: string;
     title: string;
@@ -36,12 +56,16 @@ export interface Booking {
     name: string;
     email: string;
   };
-  // Added for user request management
-  canDelete?: boolean;
 }
 
+// Response from API when calculating price
 export interface BookingResponse {
   success: boolean;
-  data?: Booking | Booking[];
   message?: string;
+  data?: {
+    breakdown?: PriceBreakdown;
+    booking?: Booking;
+    bookings?: Booking[];
+  };
+  isAvailable?: boolean;
 }

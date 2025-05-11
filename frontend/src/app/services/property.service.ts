@@ -23,8 +23,7 @@ export class PropertyService {
       }
     });
 
-    console.log('Fetching properties with URL:', this.apiUrl);
-    console.log('Request parameters:', params.toString());
+ 
 
     return this.http.get(this.apiUrl, { params }).pipe(
       tap((response) => console.log('Raw API response:', response)),

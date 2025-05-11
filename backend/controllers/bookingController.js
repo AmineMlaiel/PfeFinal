@@ -15,8 +15,9 @@ exports.createBooking = async (req, res) => {
 
     const {
       propertyId,
-      checkIn,
-      checkOut,
+      bookingMonth, // Expecting bookingMonth from frontend
+      // checkIn, // No longer expecting checkIn from frontend for monthly booking
+      // checkOut, // No longer expecting checkOut from frontend for monthly booking
       totalPrice,
       guests,
       contactInfo,
@@ -24,10 +25,10 @@ exports.createBooking = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!propertyId || !checkIn || !checkOut || !guests || !contactInfo) {
+    if (!propertyId || !bookingMonth || !guests || !contactInfo) {
       return res.status(400).json({
         success: false,
-        message: "Missing required booking information",
+        message: "Missing required booking information (propertyId, bookingMonth, guests, contactInfo)",
       });
     }
 
@@ -40,48 +41,41 @@ exports.createBooking = async (req, res) => {
       });
     }
 
-    // Check if property is available
-    if (!propertyDetails.availability.isAvailable) {
+    // Check if property is available (general availability flag)
+    // This might be a separate flag on the property model, not related to specific dates
+    if (propertyDetails.availability && !propertyDetails.availability.isAvailable) {
       return res.status(400).json({
         success: false,
-        message: "This property is not available for booking",
+        message: "This property is not available for booking at the moment.",
       });
     }
 
-    // Parse dates
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
-    const bookingDate = new Date(bookingMonth);
-
-   // Calculate first and last day of the month for compatibility
-    const firstDate =new Date(bookingDate.getFullYear(),bookingDate.getMonth(),1);
-    const lastDate = newDate(bookingDate.getFullYear(),bookingDate.getMonth(),+ 1,0);
-
-
-
-
-    // Validate dates
-    if (endDate <= startDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Check-out date must be after check-in date",
-      });
+    // Parse bookingMonth
+    const bookingDate = new Date(bookingMonth); // bookingMonth should be in YYYY-MM format or a full date string for the first of the month
+    if (isNaN(bookingDate.getTime())) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "Invalid bookingMonth format. Please use YYYY-MM or a valid date string."
+        });
     }
 
-    // Check if property is already booked for the requested dates
+   // Calculate first and last day of the month
+    const firstDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth(), 1);
+    const lastDayOfMonth = new Date(bookingDate.getFullYear(), bookingDate.getMonth() + 1, 0);
+
+    // Check if property is already booked for the requested month
+    // The query for existingBooking needs to correctly use bookingMonth
     const existingBooking = await Booking.findOne({
       propertyId,
       status: { $in: ["confirmed", "pending"] },
-      bookingMonth : {
-        $gte : new Date(bookingDate.getFullYear(), bookingDate.getMonth(),1),
-        $lt : new Date(bookingDate.getFullYear(), bookingDate.getmonth() +1, 1)
-      }
+      // Assuming bookingMonth in the DB stores the first day of the booked month
+      bookingMonth: firstDayOfMonth 
     });
 
     if (existingBooking) {
       return res.status(400).json({
         success: false,
-        message: "Property is already booked for the selected dates",
+        message: "Property is already booked for the selected month. Please choose a different month.",
       });
     }
 
@@ -89,16 +83,16 @@ exports.createBooking = async (req, res) => {
     const bookingData = {
       propertyId,
       userId: req.user._id,
-      bookingMonth: bookingDate,
-      checkIn :firstDate,
-      checkOut: lastDate,
-      totalPrice,
+      bookingMonth: firstDayOfMonth, // Store the first day of the month
+      checkIn :firstDayOfMonth, // For compatibility or specific needs
+      checkOut: lastDayOfMonth, // For compatibility or specific needs
+      totalPrice, // This should be calculated on the backend ideally
       guests,
       contactInfo,
       specialRequests,
       status: "pending",
-      property: propertyId,
-      canDelete: true, // Setting both propertyId and property fields
+      property: propertyId, // Redundant if propertyId is already there, but good for population
+      // canDelete: true, // This field is not in your schema, remove or add to schema
     };
 
     // Create booking
@@ -107,7 +101,7 @@ exports.createBooking = async (req, res) => {
     // Get more information about the property for the response
     const populatedBooking = await Booking.findById(booking._id).populate({
       path: "property",
-      select: "title images address price host",
+      select: "title images address price host", // Add other relevant fields
     });
 
     res.status(201).json({
@@ -115,9 +109,10 @@ exports.createBooking = async (req, res) => {
       data: populatedBooking,
     });
   } catch (error) {
+    console.error("Error creating booking:", error); // Log the error for debugging
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to create booking",
     });
   }
 };
@@ -139,7 +134,7 @@ exports.getBookings = async (req, res) => {
       const propertyIds = properties.map((property) => property._id);
 
       query = Booking.find({
-        $or: [{ tenant: req.user._id }, { property: { $in: propertyIds } }],
+        $or: [{ userId: req.user._id }, { property: { $in: propertyIds } }], // Changed tenant to userId
       });
     }
 
@@ -150,7 +145,7 @@ exports.getBookings = async (req, res) => {
         select: "title images address price",
       })
       .populate({
-        path: "tenant",
+        path: "userId", // Changed tenant to userId
         select: "name email mobileNumber",
       });
 
@@ -163,9 +158,10 @@ exports.getBookings = async (req, res) => {
       data: bookings,
     });
   } catch (error) {
+    console.error("Error getting bookings:", error);
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to retrieve bookings",
     });
   }
 };
@@ -178,14 +174,14 @@ exports.getBooking = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
       .populate({
         path: "property",
-        select: "title images address price owner",
+        select: "title images address price owner host", // Added host
         populate: {
-          path: "owner",
+          path: "owner", // Assuming 'owner' is the correct ref path in Property model
           select: "name email mobileNumber",
         },
       })
       .populate({
-        path: "userId", // Use correct field name
+        path: "userId", 
         select: "name email mobileNumber",
       });
 
@@ -196,12 +192,14 @@ exports.getBooking = async (req, res) => {
       });
     }
 
-    const property = await Property.findById(booking.property);
+    // The property might already be populated, or you might need to fetch it if only propertyId is stored sometimes.
+    // Let's assume booking.property is populated or is an ID.
+    const propertyOwnerId = booking.property.owner ? booking.property.owner.toString() : (booking.property.host ? booking.property.host.toString() : null);
 
     if (
       !booking.userId || 
       (booking.userId._id.toString() !== req.user.id &&
-      property.owner.toString() !== req.user.id &&
+      propertyOwnerId !== req.user.id && // Check against property owner
       req.user.role !== "admin")
     ) {
       return res.status(401).json({
@@ -215,9 +213,10 @@ exports.getBooking = async (req, res) => {
       data: booking,
     });
   } catch (error) {
+    console.error("Error getting single booking:", error);
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to retrieve booking",
     });
   }
 };
@@ -258,8 +257,8 @@ exports.updateBookingStatus = async (req, res) => {
     }
 
     // Check authorization
-    const isPropertyOwner =
-      property.host.toString() === req.user._id.toString();
+    const propertyOwnerId = property.owner ? property.owner.toString() : (property.host ? property.host.toString() : null);
+    const isPropertyOwner = propertyOwnerId === req.user._id.toString();
     const isTenant = booking.userId.toString() === req.user._id.toString();
     const isAdmin = req.user.role === "admin";
 
@@ -272,23 +271,18 @@ exports.updateBookingStatus = async (req, res) => {
 
     // If status is being set to confirmed, check for conflicts
     if (status === "confirmed" && booking.status !== "confirmed") {
-      // Check for conflicting bookings
+      // For monthly booking, conflict is if the bookingMonth is the same
       const conflictingBookings = await Booking.findOne({
         propertyId: booking.propertyId,
         _id: { $ne: booking._id }, // Exclude current booking
         status: "confirmed",
-        $or: [
-          {
-            checkIn: { $lte: booking.checkOut },
-            checkOut: { $gte: booking.checkIn },
-          },
-        ],
+        bookingMonth: booking.bookingMonth // Check against the stored bookingMonth
       });
 
       if (conflictingBookings) {
         return res.status(400).json({
           success: false,
-          message: "There is a conflicting confirmed booking for these dates",
+          message: "There is a conflicting confirmed booking for this month.",
         });
       }
     }
@@ -300,6 +294,20 @@ exports.updateBookingStatus = async (req, res) => {
         message: "Only the property owner or admin can confirm bookings",
       });
     }
+    // Tenant can cancel their own pending booking
+    if (status === "cancelled" && booking.status === "pending" && !isTenant && !isPropertyOwner && !isAdmin) {
+        return res.status(403).json({
+            success: false,
+            message: "You can only cancel your own pending bookings."
+        });
+    }
+    if (status === "cancelled" && booking.status !== "pending" && !isPropertyOwner && !isAdmin) {
+        return res.status(403).json({
+            success: false,
+            message: "Only property owner or admin can cancel confirmed/completed bookings."
+        });
+    }
+
 
     // Update booking status
     booking.status = status;
@@ -310,15 +318,16 @@ exports.updateBookingStatus = async (req, res) => {
       data: booking,
     });
   } catch (error) {
+    console.error("Error updating booking status:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to update booking status",
     });
   }
 };
 
 
-// @desc    Add message to booking
+// @desc    Add message to booking (This seems to be for a different feature, ensure messages array exists in bookingSchema if used)
 // @route   POST /api/bookings/:id/messages
 // @access  Private
 exports.addBookingMessage = async (req, res) => {
@@ -342,12 +351,17 @@ exports.addBookingMessage = async (req, res) => {
     }
 
     // Get the property to check ownership
-    const property = await Property.findById(booking.property);
+    const property = await Property.findById(booking.propertyId); // Use propertyId
+    if (!property) {
+        return res.status(404).json({ success: false, message: "Associated property not found" });
+    }
+
+    const propertyOwnerId = property.owner ? property.owner.toString() : (property.host ? property.host.toString() : null);
 
     // Check if user is authorized to add messages
     if (
-      booking.tenant.toString() !== req.user.id &&
-      property.owner.toString() !== req.user.id &&
+      booking.userId.toString() !== req.user.id && // Check against userId
+      propertyOwnerId !== req.user.id &&
       req.user.role !== "admin"
     ) {
       return res.status(401).json({
@@ -355,13 +369,18 @@ exports.addBookingMessage = async (req, res) => {
         message: "Not authorized to add messages to this booking",
       });
     }
+    
+    // Ensure booking.messages is an array
+    if (!Array.isArray(booking.messages)) {
+        booking.messages = [];
+    }
 
     // Add message to booking
     const newMessage = {
       sender: req.user._id,
       message,
       timestamp: new Date(),
-      isRead: false,
+      isRead: false, // Assuming this field exists in your message sub-document schema
     };
 
     booking.messages.push(newMessage);
@@ -372,9 +391,10 @@ exports.addBookingMessage = async (req, res) => {
       data: newMessage,
     });
   } catch (error) {
+    console.error("Error adding booking message:", error);
     res.status(400).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to add message",
     });
   }
 };
@@ -397,14 +417,15 @@ exports.getMyBookings = async (req, res) => {
       data: bookings,
     });
   } catch (error) {
+    console.error("Error getting my bookings:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to retrieve your bookings",
     });
   }
 };
 
-// @desc    Get bookings for a property
+// @desc    Get bookings for a property (for property owner)
 // @route   GET /api/bookings/property/:propertyId
 // @access  Private
 exports.getPropertyBookings = async (req, res) => {
@@ -418,9 +439,10 @@ exports.getPropertyBookings = async (req, res) => {
       });
     }
 
+    const propertyOwnerId = property.owner ? property.owner.toString() : (property.host ? property.host.toString() : null);
     // Check if user is authorized to view these bookings
     if (
-      property.host.toString() !== req.user._id.toString() &&
+      propertyOwnerId !== req.user._id.toString() &&
       req.user.role !== "admin"
     ) {
       return res.status(403).json({
@@ -432,7 +454,7 @@ exports.getPropertyBookings = async (req, res) => {
     const bookings = await Booking.find({ propertyId: req.params.propertyId })
       .populate({
         path: "userId",
-        select: "name email phone",
+        select: "name email phone", // Changed from mobileNumber to phone to match schema
       })
       .sort({ createdAt: -1 });
 
@@ -442,9 +464,10 @@ exports.getPropertyBookings = async (req, res) => {
       data: bookings,
     });
   } catch (error) {
+    console.error("Error getting property bookings:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to retrieve property bookings",
     });
   }
 };
@@ -467,12 +490,16 @@ exports.getBookingCalendar = async (req, res) => {
     const bookings = await Booking.find({
       propertyId: req.params.propertyId,
       status: "confirmed",
-    }).select("checkIn checkOut");
+    }).select("bookingMonth checkIn checkOut"); // Select bookingMonth as well
 
     // Format dates for frontend calendar
-    const bookedDates = bookings.map((booking) => ({
-      startDate: booking.checkIn,
-      endDate: booking.checkOut,
+    // For monthly bookings, you might want to return booked months
+    const bookedPeriods = bookings.map((booking) => ({
+      // If you store bookingMonth as the first day of the month:
+      month: booking.bookingMonth ? booking.bookingMonth.toISOString().substring(0,7) : null, // YYYY-MM
+      // Or if you are still using checkIn/checkOut for display:
+      // startDate: booking.checkIn,
+      // endDate: booking.checkOut,
     }));
 
     res.status(200).json({
@@ -481,21 +508,22 @@ exports.getBookingCalendar = async (req, res) => {
         property: {
           id: property._id,
           title: property.title,
-          price: property.price,
-          isAvailable: property.availability.isAvailable,
+          price: property.price, // Consider adding monthlyPrice here if you implement it
+          isAvailable: property.availability ? property.availability.isAvailable : true, // Handle if availability is not set
         },
-        bookedDates,
+        bookedPeriods, // Changed from bookedDates
       },
     });
   } catch (error) {
+    console.error("Error getting booking calendar:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to retrieve booking calendar",
     });
   }
 };
 
-// @desc    Check property availability for specific dates
+// @desc    Check property availability for specific month
 // @route   POST /api/bookings/check-availability
 // @access  Public
 exports.checkAvailability = async (req, res) => {
@@ -520,35 +548,31 @@ exports.checkAvailability = async (req, res) => {
     }
 
     // Check if property is available for booking in general
-    if (!property.availability.isAvailable) {
+    if (property.availability && !property.availability.isAvailable) {
       return res.status(200).json({
-        success: true,
+        success: true, // Still a successful check, but property is unavailable
         isAvailable: false,
-        message: "Property is not available for booking",
+        message: "Property is generally not available for booking at the moment.",
       });
     }
 
-    // Parse dates
-    const startDate = new Date(checkIn);
-    const endDate = new Date(checkOut);
-    const bookingDate = new Date(bookingMonth);
-
-    // Validate dates
-    if (endDate <= startDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Check-out date must be after check-in date",
-      });
+    // Parse bookingMonth (expecting YYYY-MM from frontend or a full date string for the first of the month)
+    const requestedMonthDate = new Date(bookingMonth);
+    if (isNaN(requestedMonthDate.getTime())) {
+        return res.status(400).json({ 
+            success: false, 
+            message: "Invalid bookingMonth format. Please use YYYY-MM or a valid date string."
+        });
     }
+    
+    // Normalize to the first day of the month for consistent querying
+    const firstDayOfRequestedMonth = new Date(requestedMonthDate.getFullYear(), requestedMonthDate.getMonth(), 1);
 
-    // Check if property is already booked for the requested dates
+    // Check if property is already booked for the requested month
     const existingBooking = await Booking.findOne({
       propertyId,
-      status: { $in: ["confirmed", "pending"] },
-      bookingMonth: {
-        $gte: new Date(bookingDate.getFullYear(),bookingDate.getMonth(),1),
-        $lt: new Date(bookingDate.getFullYear(),bookingMonth.getMonth(), +1 ,1)
-      }
+      status: { $in: ["confirmed", "pending"] }, 
+      bookingMonth: firstDayOfRequestedMonth // Compare against the stored first day of the month
     });
 
     // Return availability status
@@ -557,13 +581,14 @@ exports.checkAvailability = async (req, res) => {
       success: true,
       isAvailable,
       message: isAvailable
-        ? "Property is available for the selected dates"
-        : "Property is not available for the selected dates",
+        ? "This month is available."
+        : "This month is not available. Please select a different month.",
     });
   } catch (error) {
+    console.error("Error in checkAvailability:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Error checking availability",
     });
   }
 };
@@ -573,50 +598,128 @@ exports.checkAvailability = async (req, res) => {
 // @access  Public
 exports.calculateBookingPrice = async (req, res) => {
   try {
-    const { propertyId, bookingMonth, guests } = req.body;
+    const { propertyId, bookingMonth, guests, bookingType, checkIn, checkOut } = req.body;
 
     // Validate required fields
-    if (!propertyId || !bookingMonth || !guests) {
+    if (!propertyId || !guests || !bookingType) {
       return res.status(400).json({
         success: false,
-        message: "Property ID, booking month, and guests information are required",
+        message: "Property ID, guests information, and booking type are required",
       });
     }
 
-    // Check if property exists
+    // Validate guests structure
+    if (!guests.adults || guests.adults < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one adult is required",
+      });
+    }
+
+    // Fetch the property
     const property = await Property.findById(propertyId);
     if (!property) {
-      return res.status(404).json({
-        success: false,
-        message: "Property not found",
+      return res.status(404).json({ 
+        success: false, 
+        message: "Property not found" 
       });
     }
 
-    // Calculate monthly price (assuming property.price is daily rate)
-    const daysInMonth = new Date(
-      new Date(bookingMonth).getFullYear(),
-      new Date(bookingMonth).getMonth() + 1,
-      0
-    ).getDate();
-    
-    // Apply a monthly discount (e.g., 15% off daily rate)
-    const monthlyDiscount = 0.15;
-    const basePrice = property.price * daysInMonth * (1 - monthlyDiscount);
+    let basePrice = 0;
+    let numberOfNights = 0;
+    let daysInSelectedMonth = 0;
 
-    // Calculate additional guest fee if applicable
-    let additionalGuestFee = 0;
-    const totalGuests = guests.adults + (guests.children || 0);
+    if (bookingType === 'monthly') {
+      // Monthly booking validation
+      if (!bookingMonth) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Booking month is required for monthly bookings" 
+        });
+      }
+      
+      if (!property.pricePerMonth) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Monthly pricing is not available for this property" 
+        });
+      }
 
-    if (property.additionalGuestFee && totalGuests > property.baseGuests) {
-      const additionalGuests = totalGuests - property.baseGuests;
-      additionalGuestFee = additionalGuests * property.additionalGuestFee * daysInMonth;
+      const monthDate = new Date(bookingMonth);
+      if (isNaN(monthDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking month format" 
+        });
+      }
+
+      daysInSelectedMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+      numberOfNights = daysInSelectedMonth;
+      basePrice = property.pricePerMonth;
+
+    } else if (bookingType === 'nightly') {
+      // Nightly booking validation
+      if (!checkIn || !checkOut) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Check-in and check-out dates are required for nightly bookings" 
+        });
+      }
+
+      if (!property.pricePerNight) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Nightly pricing is not available for this property" 
+        });
+      }
+
+      const startDate = new Date(checkIn);
+      const endDate = new Date(checkOut);
+      
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid check-in date format" 
+        });
+      }
+
+      if (isNaN(endDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid check-out date format" 
+        });
+      }
+
+      if (endDate <= startDate) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Check-out date must be after check-in date" 
+        });
+      }
+
+      numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      basePrice = property.pricePerNight * numberOfNights;
+
+    } else {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid booking type specified. Choose 'nightly' or 'monthly'" 
+      });
     }
 
-    // Calculate cleaning fee (one-time)
-    const cleaningFee = property.cleaningFee || 0;
+    // Calculate additional guest fee
+    let additionalGuestFee = 0;
+    const totalGuests = guests.adults + (guests.children || 0);
+    
+    if (property.additionalGuestFee && property.baseGuests && totalGuests > property.baseGuests) {
+      const additionalGuests = totalGuests - property.baseGuests;
+      additionalGuestFee = additionalGuests * property.additionalGuestFee * numberOfNights;
+    }
 
-    // Calculate service fee (e.g., 10% of base price)
-    const serviceFee = basePrice * 0.1;
+    // Calculate other fees
+    const cleaningFee = property.cleaningFee || 0;
+    const serviceFeePercentage = property.serviceFeePercentage || 0.1; // Default to 10%
+    const serviceFee = basePrice * serviceFeePercentage;
 
     // Calculate total price
     const totalPrice = basePrice + additionalGuestFee + cleaningFee + serviceFee;
@@ -630,41 +733,65 @@ exports.calculateBookingPrice = async (req, res) => {
           cleaningFee,
           serviceFee,
           totalPrice,
-          daysInMonth,
-          monthlyDiscount: `${monthlyDiscount * 100}%`,
+          numberOfNights,
+          daysInSelectedMonth: bookingType === 'monthly' ? daysInSelectedMonth : null,
+          bookingType,
         },
       },
     });
+
   } catch (error) {
+    console.error("Error calculating booking price:", error);
     res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to calculate price",
     });
   }
 };
 
-
-// Delete booking by ID
+// @desc    Delete a booking
+// @route   DELETE /api/bookings/:id
+// @access  Private
 exports.deleteBooking = async (req, res) => {
   try {
-    const bookingId = req.params.id;
+    const booking = await Booking.findById(req.params.id);
 
-    // Ensure the ID format is valid (optional, but good practice)
-    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
-      return res.status(400).json({ message: "Invalid booking ID" });
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found",
+      });
     }
 
-    // Attempt to delete the booking
-    const deletedBooking = await Booking.findByIdAndDelete(bookingId);
-
-    if (!deletedBooking) {
-      return res.status(404).json({ message: "Booking not found" });
+    // Check if user is authorized to delete this booking
+    // Only the user who made the booking or an admin can delete
+    if (booking.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized to delete this booking",
+      });
     }
 
-    // Send success response
-    return res.status(200).json({ message: "Booking deleted successfully" });
+    // Optionally, add more conditions (e.g., can only delete 'pending' bookings)
+    // if (booking.status !== 'pending') {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Only pending bookings can be deleted by the user.",
+    //   });
+    // }
+
+    await booking.deleteOne(); // Changed from booking.remove()
+
+    res.status(200).json({
+      success: true,
+      data: {},
+      message: "Booking deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting booking:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete booking",
+    });
   }
 };

@@ -55,11 +55,16 @@ const propertySchema = new mongoose.Schema(
         "other",
       ],
     },
-    price: {
+    pricePerNight: {
       type: Number,
       required: [true, "Rental price is required"],
       min: [0, "Price cannot be negative"],
     },
+    pricePerMonth: { // New field for monthly price
+  type: Number,
+  // required: false, // Making it optional, owner can fill it if they offer monthly rates
+  min: [0, "Price per month cannot be negative"],
+},
     bedrooms: {
       type: Number,
       required: [true, "Number of bedrooms is required"],

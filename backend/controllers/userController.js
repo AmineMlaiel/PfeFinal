@@ -30,7 +30,7 @@ exports.registerUser = async (req, res) => {
       password, // No need to hash here, the pre-save hook in the model will do it
       mobileNumber,
       // For testing purposes, you can set this to true to skip email verification
-      isVerified: true, // TEMPORARILY set to true for testing
+      isVerified: false, // TEMPORARILY set to true for testing
       // Only allow setting role to renter or owner during registration
       role: role === "owner" ? "owner" : "renter",
     });
