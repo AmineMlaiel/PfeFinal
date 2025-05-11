@@ -7,6 +7,7 @@ import { AuthService } from '../../auth/auth.service';
 import { Property } from '../../models/property.model';
 import { Booking } from '../../models/booking.model';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import Swal from 'sweetalert2';
 import { faCalendar, faUser, faEnvelope, faPhone, faExclamationTriangle, faExclamationCircle, faCheckCircle, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
@@ -59,6 +60,8 @@ export class BookingFormComponent implements OnInit{
   // Dates
   currentMonth = new Date().toISOString().slice(0, 7);
   selectedDate: string = '';
+  canSubmitBooking = false; // add this property
+
 
   constructor(
     private fb: FormBuilder,
@@ -69,7 +72,16 @@ export class BookingFormComponent implements OnInit{
 
   ngOnInit(): void {
     this.initBookingForm();
+    this.authService.getCurrentUser().subscribe(user => {
+  if (user && user.isVerified === true) {
+    this.canSubmitBooking = true;
+  } else {
+    this.canSubmitBooking = false;
   }
+});
+
+  }
+
 
   initBookingForm(): void {
     const currentDate = new Date();
@@ -191,12 +203,41 @@ export class BookingFormComponent implements OnInit{
       }
     });
   }
+  
+handleBookingClick(): void {
+  if (
+    this.bookingForm.invalid ||
+    this.isProcessing ||
+    !this.isAvailable ||
+    this.isCalculating ||
+    this.isCheckingAvailability
+  ) {
+    return;
+  }
+
+  if (!this.canSubmitBooking) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Account not validated',
+      text: 'You must validate your account before submitting a booking.',
+      confirmButtonText: 'Got it'
+    });
+    return;
+  }
+
+  this.onSubmit();
+}
+
 
   onSubmit(): void {
     if (this.bookingForm.invalid) {
       this.markFormGroupTouched(this.bookingForm);
       return;
     }
+    if (!this.canSubmitBooking) {
+  alert('Your account must be validated before making a booking.');
+  return;
+}
 
     if (!this.isAvailable) {
       this.errorMessage = this.isMonthView

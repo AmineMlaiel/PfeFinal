@@ -241,15 +241,21 @@
     </div>
 
     <!-- Submit Button -->
-    <button
-      type="submit"
-      class="btn-book"
-      [disabled]="bookingForm.invalid || isProcessing || !isAvailable || isCalculating || isCheckingAvailability"
-    >
-      <span *ngIf="!isProcessing && !isCalculating && !isCheckingAvailability">Book Now</span>
-      <span *ngIf="isProcessing">Processing...</span>
-      <span *ngIf="isCalculating && !isProcessing">Calculating Price...</span>
-      <span *ngIf="isCheckingAvailability && !isProcessing">Checking Availability...</span>
-    </button>
+ <button
+  type="button"
+  class="btn-book"
+  [ngClass]="{
+    disabled: bookingForm.invalid || isProcessing || !isAvailable || isCalculating || isCheckingAvailability
+  }"
+  (click)="handleBookingClick()"
+>
+  <span *ngIf="!isProcessing && !isCalculating && !isCheckingAvailability">Book Now</span>
+  <span *ngIf="isProcessing">Processing...</span>
+  <span *ngIf="isCalculating && !isProcessing">Calculating Price...</span>
+  <span *ngIf="isCheckingAvailability && !isProcessing">Checking Availability...</span>
+</button>
+
+
+
   </form>
 </div>
