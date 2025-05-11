@@ -391,7 +391,7 @@ export class PropertyUpdateComponent
     }
 
     // Check property price, bedrooms, bathrooms, area
-    if (!this.property.price || this.property.price <= 0) {
+    if (!this.property.pricePerNight || this.property.pricePerNight <= 0) {
       this.error = 'Please enter a valid price.';
       return false;
     }

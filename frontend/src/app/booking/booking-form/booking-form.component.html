@@ -2,7 +2,7 @@
   <div class="booking-form-header">
     <h3>Book This Property</h3>
     <div class="price-info">
-      <span class="price">{{ property.price | currency }} </span>
+      <span class="price">{{ property.pricePerNight | currency }} </span>
       <span class="per-night">/ night</span>
       <span class="monthly-discount" *ngIf="isMonthView">(15% monthly discount applied)</span>
     </div>
@@ -203,8 +203,8 @@
 
       <div *ngIf="!isCalculating && totalPrice > 0" class="price-breakdown">
         <div class="price-item">
-          <span *ngIf="isMonthView">{{ property.price | currency }} x {{ daysInMonth }} days (15% monthly discount)</span>
-          <span *ngIf="!isMonthView">{{ property.price | currency }} x 1 day</span>
+          <span *ngIf="isMonthView">{{ property.pricePerNight | currency }} x {{ daysInMonth }} days (15% monthly discount)</span>
+          <span *ngIf="!isMonthView">{{ property.pricePerNight | currency }} x 1 day</span>
           <span>{{ basePrice | currency }}</span>
         </div>
 

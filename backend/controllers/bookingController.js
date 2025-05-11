@@ -598,68 +598,127 @@ exports.checkAvailability = async (req, res) => {
 // @access  Public
 exports.calculateBookingPrice = async (req, res) => {
   try {
-    const { propertyId, bookingMonth, guests, bookingType } = req.body; // Added bookingType (month/night)
+    const { propertyId, bookingMonth, guests, bookingType, checkIn, checkOut } = req.body;
 
     // Validate required fields
-    if (!propertyId || !bookingMonth || !guests || !bookingType) {
+    if (!propertyId || !guests || !bookingType) {
       return res.status(400).json({
         success: false,
-        message: "Property ID, booking month/dates, guests information, and booking type are required",
+        message: "Property ID, guests information, and booking type are required",
       });
     }
 
-    // Check if property exists
+    // Validate guests structure
+    if (!guests.adults || guests.adults < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one adult is required",
+      });
+    }
+
+    // Fetch the property
     const property = await Property.findById(propertyId);
     if (!property) {
-      return res.status(404).json({
-        success: false,
-        message: "Property not found",
+      return res.status(404).json({ 
+        success: false, 
+        message: "Property not found" 
       });
     }
-    
-    let basePrice = 0;
-    let numberOfNights = 0; // For nightly calculation
-    const daysInSelectedMonth = new Date(new Date(bookingMonth).getFullYear(), new Date(bookingMonth).getMonth() + 1, 0).getDate();
 
-    if (bookingType === 'month') {
-        if (!property.pricePerMonth) {
-            return res.status(400).json({ success: false, message: "Monthly pricing not available for this property." });
-        }
-        basePrice = property.pricePerMonth;
-        numberOfNights = daysInSelectedMonth; // For calculating guest fees if they are per night
-    } else if (bookingType === 'night') {
-        if (!property.pricePerNight) {
-            return res.status(400).json({ success: false, message: "Nightly pricing not available for this property." });
-        }
-        // For nightly, bookingMonth might be re-purposed as checkIn and you'd need a checkOut
-        // Let's assume for now if bookingType is 'night', 'bookingMonth' is 'checkIn' and 'nights' is passed or 'checkOut'
-        // This part needs clarification on how nightly selection is handled on frontend
-        // For simplicity, let's assume 'bookingMonth' is 'checkIn' and 'req.body.checkOut' is provided for nightly.
-        const checkInDate = new Date(bookingMonth);
-        const checkOutDate = new Date(req.body.checkOut);
-        if (isNaN(checkInDate.getTime()) || isNaN(checkOutDate.getTime()) || checkOutDate <= checkInDate) {
-            return res.status(400).json({ success: false, message: "Invalid check-in or check-out date for nightly booking." });
-        }
-        numberOfNights = Math.ceil((checkOutDate - checkInDate) / (1000 * 60 * 60 * 24));
-        basePrice = property.pricePerNight * numberOfNights;
+    let basePrice = 0;
+    let numberOfNights = 0;
+    let daysInSelectedMonth = 0;
+
+    if (bookingType === 'monthly') {
+      // Monthly booking validation
+      if (!bookingMonth) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Booking month is required for monthly bookings" 
+        });
+      }
+      
+      if (!property.pricePerMonth) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Monthly pricing is not available for this property" 
+        });
+      }
+
+      const monthDate = new Date(bookingMonth);
+      if (isNaN(monthDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid booking month format" 
+        });
+      }
+
+      daysInSelectedMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+      numberOfNights = daysInSelectedMonth;
+      basePrice = property.pricePerMonth;
+
+    } else if (bookingType === 'nightly') {
+      // Nightly booking validation
+      if (!checkIn || !checkOut) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Check-in and check-out dates are required for nightly bookings" 
+        });
+      }
+
+      if (!property.pricePerNight) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Nightly pricing is not available for this property" 
+        });
+      }
+
+      const startDate = new Date(checkIn);
+      const endDate = new Date(checkOut);
+      
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid check-in date format" 
+        });
+      }
+
+      if (isNaN(endDate.getTime())) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Invalid check-out date format" 
+        });
+      }
+
+      if (endDate <= startDate) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Check-out date must be after check-in date" 
+        });
+      }
+
+      numberOfNights = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+      basePrice = property.pricePerNight * numberOfNights;
+
     } else {
-        return res.status(400).json({ success: false, message: "Invalid booking type specified." });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid booking type specified. Choose 'nightly' or 'monthly'" 
+      });
     }
 
-    // Calculate additional guest fee if applicable (assuming additionalGuestFee is per night)
+    // Calculate additional guest fee
     let additionalGuestFee = 0;
     const totalGuests = guests.adults + (guests.children || 0);
-
-    if (property.additionalGuestFee && totalGuests > property.baseGuests) {
+    
+    if (property.additionalGuestFee && property.baseGuests && totalGuests > property.baseGuests) {
       const additionalGuests = totalGuests - property.baseGuests;
-      additionalGuestFee = additionalGuests * property.additionalGuestFee * (bookingType === 'month' ? daysInSelectedMonth : numberOfNights);
+      additionalGuestFee = additionalGuests * property.additionalGuestFee * numberOfNights;
     }
 
-    // Calculate cleaning fee (one-time)
+    // Calculate other fees
     const cleaningFee = property.cleaningFee || 0;
-
-    // Calculate service fee (e.g., 10% of base price)
-    const serviceFeePercentage = property.serviceFeePercentage || 0.1; // Assuming 10% if not specified
+    const serviceFeePercentage = property.serviceFeePercentage || 0.1; // Default to 10%
     const serviceFee = basePrice * serviceFeePercentage;
 
     // Calculate total price
@@ -674,12 +733,13 @@ exports.calculateBookingPrice = async (req, res) => {
           cleaningFee,
           serviceFee,
           totalPrice,
-          numberOfNights: bookingType === 'month' ? daysInSelectedMonth : numberOfNights,
-          daysInSelectedMonth: bookingType === 'month' ? daysInSelectedMonth : null, // Only relevant for monthly
+          numberOfNights,
+          daysInSelectedMonth: bookingType === 'monthly' ? daysInSelectedMonth : null,
           bookingType,
         },
       },
     });
+
   } catch (error) {
     console.error("Error calculating booking price:", error);
     res.status(500).json({

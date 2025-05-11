@@ -3,7 +3,9 @@ export interface Property {
   title: string;
   description: string;
   propertyType: string;
-  price: number;
+  pricePerNight: number;
+  pricePerMonth: number;
+
   bedrooms: number;
   bathrooms: number;
   area: number;

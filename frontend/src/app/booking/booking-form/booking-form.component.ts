@@ -21,7 +21,7 @@ import { faCalendar, faUser, faEnvelope, faPhone, faExclamationTriangle, faExcla
   templateUrl: './booking-form.component.html',
   styleUrl: './booking-form.component.scss',
 })
-export class BookingFormComponent implements OnInit {
+export class BookingFormComponent implements OnInit{ 
   @Input() property!: Property;
 
   // Icons
