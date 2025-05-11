@@ -5,10 +5,10 @@
   <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
     <div class="flex items-center space-x-4">
       <div
-        class="w-10 h-10 bg-no-repeat bg-contain bg-left"
+        class="w-10 h-10 bg-no-repeat bg-contain bg-center"
         style="background-image: url('favicon-96x96.png');"
       ></div>
-      <a routerLink="/home" class="text-white text-2xl font-bold">Rentify</a>
+      <a routerLink="/home" class="text-white text-2xl font-bold hover:text-blue-400 transition">Rentify</a>
     </div>
 
     <nav class="hidden md:flex space-x-6 items-center">
@@ -22,8 +22,8 @@
       </ng-container>
 
       <!-- Owner Links -->
-      <ng-container *ngIf="isOwner && isAdmin ">
-        <a routerLink="/properties/add" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">List a Property</a>
+      <ng-container *ngIf="isOwner && !isAdmin">
+        <a routerLink="/properties/add" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Add a Property</a>
         <a routerLink="/properties/my-properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">My Properties</a>
       </ng-container>
 
@@ -41,39 +41,53 @@
     </nav>
 
     <!-- Mobile menu button -->
-    <button class="flex flex-col space-y-1 md:hidden" (click)="toggleMobileMenu()">
-      <span class="w-6 h-0.5 bg-white"></span>
-      <span class="w-6 h-0.5 bg-white"></span>
-      <span class="w-6 h-0.5 bg-white"></span>
+    <button 
+      class="flex flex-col space-y-1 md:hidden" 
+      (click)="toggleMobileMenu()"
+      aria-label="Toggle menu"
+    >
+      <span class="w-6 h-0.5 bg-white transition-transform duration-300" [class.transform]="mobileMenuOpen" [class.rotate-45]="mobileMenuOpen" [class.translate-y-1.5]="mobileMenuOpen"></span>
+      <span class="w-6 h-0.5 bg-white transition-opacity duration-300" [class.opacity-0]="mobileMenuOpen"></span>
+      <span class="w-6 h-0.5 bg-white transition-transform duration-300" [class.transform]="mobileMenuOpen" [class.-rotate-45]="mobileMenuOpen" [class.-translate-y-1.5]="mobileMenuOpen"></span>
     </button>
   </div>
 
   <!-- Mobile menu -->
-  <div *ngIf="mobileMenuOpen" class="md:hidden bg-black/90 backdrop-blur-md p-4 space-y-4">
-    <a routerLink="/home" class="block text-white hover:text-blue-400">Home</a>
-    <a routerLink="/properties" class="block text-white hover:text-blue-400">Properties</a>
+  <div 
+    *ngIf="mobileMenuOpen" 
+    class="md:hidden bg-black/90 backdrop-blur-md p-4 space-y-4 transition-all duration-300"
+    [class.animate-slideDown]="mobileMenuOpen"
+  >
+    <a routerLink="/home" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Home</a>
+    <a routerLink="/properties" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Properties</a>
+    <a routerLink="../bookign/my-bookings" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">My Booking</a>
 
     <!-- Admin Links (Mobile) -->
     <ng-container *ngIf="isAdmin">
-      <a routerLink="/admin" class="block text-white hover:text-blue-400">Admin Dashboard</a>
-      <a routerLink="/admin/properties" class="block text-white hover:text-blue-400">Property Approvals</a>
+      <a routerLink="/admin" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Admin Dashboard</a>
+      <a routerLink="/admin/properties" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Property Approvals</a>
     </ng-container>
 
     <!-- Owner Links (Mobile) -->
-    <ng-container *ngIf="isOwner">
-      <a routerLink="/properties/add" class="block text-white hover:text-blue-400">List a Property</a>
-      <a routerLink="/properties/my-properties" class="block text-white hover:text-blue-400">My Properties</a>
+    <ng-container *ngIf="isOwner && !isAdmin">
+      <a routerLink="/properties/add" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">List a Property</a>
+      <a routerLink="/properties/my-properties" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">My Properties</a>
     </ng-container>
 
-    <a routerLink="/profile" class="block text-white hover:text-blue-400">Profile</a>
+    <a routerLink="/profile" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Profile</a>
 
     <ng-container *ngIf="isLoggedIn">
-      <button (click)="logout()" class="w-full text-left text-red-500 hover:text-white">Logout</button>
+      <button 
+        (click)="logout(); mobileMenuOpen = false" 
+        class="w-full text-left text-red-500 hover:text-white transition"
+      >
+        Logout
+      </button>
     </ng-container>
 
     <ng-container *ngIf="!isLoggedIn">
-      <a routerLink="/login" class="block text-white hover:text-blue-400">Login</a>
-      <a routerLink="/signup" class="block text-white hover:bg-blue-700 bg-blue-500 px-4 py-2 rounded">Sign Up</a>
+      <a routerLink="/login" (click)="mobileMenuOpen = false" class="block text-white hover:text-blue-400 transition">Login</a>
+      <a routerLink="/signup" (click)="mobileMenuOpen = false" class="block text-white hover:bg-blue-700 bg-blue-500 px-4 py-2 rounded transition">Sign Up</a>
     </ng-container>
   </div>
 </header>

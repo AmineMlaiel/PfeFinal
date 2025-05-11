@@ -18,7 +18,7 @@ const { notFound } = require("./utils/errorHandler");
 
 // Initialize express app
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3900;
 
 //checking the mode 
 console.log("Current environment:", process.env.NODE_ENV);
@@ -66,6 +66,8 @@ app.use(errorHandler);
 app
   .listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
+    console.log("Mongo URI:", process.env.MONGO_URI); // for debugging
+
   })
   .on("error", (error) => {
     console.error("Error starting server:", error.message);
