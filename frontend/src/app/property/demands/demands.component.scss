@@ -1,0 +1,115 @@
+/* Core styles for the demands component */
+:host {
+  display: block;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1f1f1f;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7B2CBF;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9D4EDD;
+}
+
+/* Status indicators */
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 8px;
+}
+
+.inProgress {
+  background-color: #FBBF24; /* Yellow */
+}
+
+.refused {
+  background-color: #EF4444; /* Red */
+}
+
+.accepted {
+  background-color: #10B981; /* Green */
+}
+
+/* Message container */
+.message {
+  display: flex;
+  margin-bottom: 1rem;
+  align-items: flex-start;
+}
+
+.message.right {
+  flex-direction: row-reverse;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 8px;
+}
+
+.user-msg {
+  max-width: 80%;
+  padding: 10px 15px;
+  border-radius: 18px;
+  position: relative;
+}
+
+.message:not(.right) .user-msg {
+  background-color: #5B21B6; /* Violet */
+  color: white;
+  border-bottom-left-radius: 4px;
+}
+
+.message.right .user-msg {
+  background-color: #EC4899; /* Pink */
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.sender-name {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+/* Input area */
+.send-message {
+  display: flex;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+/* Animation for expansion */
+@keyframes slideDown {
+  from { max-height: 0; opacity: 0; }
+  to { max-height: 1000px; opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { max-height: 1000px; opacity: 1; }
+  to { max-height: 0; opacity: 0; }
+}
+
+.expanded-enter-active {
+  animation: slideDown 0.3s ease-out;
+}
+
+.expanded-leave-active {
+  animation: slideUp 0.3s ease-out;
+}

@@ -24,6 +24,7 @@ import { faCalendar, faUser, faEnvelope, faPhone, faExclamationTriangle, faExcla
 })
 export class BookingFormComponent implements OnInit{ 
   @Input() property!: Property;
+  
 
   // Icons
   icons = {
@@ -60,7 +61,8 @@ export class BookingFormComponent implements OnInit{
   // Dates
   currentMonth = new Date().toISOString().slice(0, 7);
   selectedDate: string = '';
-  canSubmitBooking = false; // add this property
+  canSubmitBooking = false;
+  currentUser: any = null;
 
 
   constructor(
@@ -70,20 +72,94 @@ export class BookingFormComponent implements OnInit{
     private router: Router
   ) {}
 
-  ngOnInit(): void {
-    this.initBookingForm();
-    this.authService.getCurrentUser().subscribe(user => {
-  if (user && user.isVerified === true) {
-    this.canSubmitBooking = true;
-  } else {
-    this.canSubmitBooking = false;
-  }
-});
-
+   ngOnInit(): void {
+    this.initBookingFormStructure();
+    this.subscribeToCurrentUser();
   }
 
 
-  initBookingForm(): void {
+  private subscribeToCurrentUser(): void {
+    this.authService.getCurrentUser().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        if (user) {
+          this.canSubmitBooking = !!user.isVerified;
+          this.prefillFormWithUserData(user);
+          if (!user.isVerified) {
+            console.log("User is not verified. Verification status:", user.isVerified);
+          }
+        } else {
+          this.canSubmitBooking = false;
+          this.prefillFormWithDefaults();
+        }
+      },
+      error: (err) => {
+        console.error("Error fetching current user:", err);
+        this.currentUser = null;
+        this.canSubmitBooking = false;
+        this.prefillFormWithDefaults();
+      }
+    });
+  }
+
+  private prefillFormWithUserData(user: any): void {
+    if (this.bookingForm) {
+      this.bookingForm.patchValue({
+        contactInfo: {
+          name: user.name || '',
+          email: user.email || '',
+          phone: user.phone || ''
+        }
+      });
+    }
+  }
+
+  private prefillFormWithDefaults(): void {
+    if (this.bookingForm) { // Ensure bookingForm is initialized
+      this.bookingForm.patchValue({
+        contactInfo: {
+          name: '',
+          email: '',
+          phone: ''
+        }
+      });
+    }
+  }
+
+  handleBookingClick(): void {
+    if (this.bookingForm.invalid || this.isProcessing || !this.isAvailable) {
+      return;
+    }
+
+    if (!this.authService.isAuthenticated()) {
+      this.saveBookingIntent();
+      this.router.navigate(['/login'], {
+        queryParams: { returnUrl: this.router.url }
+      });
+      return;
+    }
+
+    if (!this.canSubmitBooking) {
+      this.showVerificationWarning();
+      return;
+    }
+
+    this.onSubmit();
+  }
+
+  private showVerificationWarning(): void {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Account not validated',
+      text: 'Please verify your email address to continue booking.',
+      confirmButtonText: 'Got it',
+      footer: '<a href="/resend-verification">Resend verification email</a>'
+    });
+  }
+
+
+
+  initBookingFormStructure(): void {
     const currentDate = new Date();
     const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     const nextMonthString = nextMonth.toISOString().slice(0, 7);
@@ -104,7 +180,6 @@ export class BookingFormComponent implements OnInit{
       specialRequests: ['']
     });
 
-    this.prefillUserInfo();
     this.setupFormListeners();
     this.updatePriceAndAvailability();
   }
@@ -115,21 +190,6 @@ export class BookingFormComponent implements OnInit{
       if (!this.isMonthView) this.updatePriceAndAvailability();
     });
     this.bookingForm.get('guests')?.valueChanges.subscribe(() => this.calculatePrice());
-  }
-
-  prefillUserInfo(): void {
-    if (this.authService.isLoggedIn()) {
-      const user = this.authService.getUser();
-      if (user) {
-        this.bookingForm.patchValue({
-          contactInfo: {
-            name: user.name || '',
-            email: user.email || '',
-            phone: user.phone || ''
-          }
-        });
-      }
-    }
   }
 
   onViewChanged(view: 'day' | 'month'): void {
@@ -204,29 +264,7 @@ export class BookingFormComponent implements OnInit{
     });
   }
   
-handleBookingClick(): void {
-  if (
-    this.bookingForm.invalid ||
-    this.isProcessing ||
-    !this.isAvailable ||
-    this.isCalculating ||
-    this.isCheckingAvailability
-  ) {
-    return;
-  }
 
-  if (!this.canSubmitBooking) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Account not validated',
-      text: 'You must validate your account before submitting a booking.',
-      confirmButtonText: 'Got it'
-    });
-    return;
-  }
-
-  this.onSubmit();
-}
 
 
   onSubmit(): void {
@@ -235,9 +273,9 @@ handleBookingClick(): void {
       return;
     }
     if (!this.canSubmitBooking) {
-  alert('Your account must be validated before making a booking.');
-  return;
-}
+      alert('Your account must be validated before making a booking.');
+      return;
+    }
 
     if (!this.isAvailable) {
       this.errorMessage = this.isMonthView
@@ -283,7 +321,7 @@ handleBookingClick(): void {
   private handleBookingSuccess(): void {
     this.successMessage = 'Booking request submitted successfully!';
     this.bookingForm.reset();
-    this.initBookingForm();
+    this.initBookingFormStructure(); // Corrected from initBookingForm
   }
 
   private handleBookingError(err: any): void {
@@ -322,7 +360,6 @@ handleBookingClick(): void {
     let dateString = '';
 
     if (dateValue instanceof Date) {
-      // Convert Date to ISO string (YYYY-MM-DD)
       dateString = dateValue.toISOString().slice(0, 10);
     } else if (typeof dateValue === 'string') {
       dateString = dateValue.slice(0, 10);
@@ -354,3 +391,4 @@ handleBookingClick(): void {
     }
   }
 }
+
