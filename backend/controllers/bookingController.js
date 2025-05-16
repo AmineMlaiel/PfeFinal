@@ -25,7 +25,7 @@ exports.createBooking = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!propertyId || !bookingMonth || !guests || !contactInfo) {
+    if (!propertyId || !bookingMonth  || !contactInfo) {
       return res.status(400).json({
         success: false,
         message: "Missing required booking information (propertyId, bookingMonth, guests, contactInfo)",
@@ -119,53 +119,49 @@ exports.createBooking = async (req, res) => {
 
 // @desc    Get all bookings
 // @route   GET /api/bookings
-// @access  Private/Admin
+// @access  Private/Admin+owner
 exports.getBookings = async (req, res) => {
   try {
     let query;
+    const { _id, role } = req.user;
 
-    // If user is admin, get all bookings
-    if (req.user.role === "admin") {
+    // Admins can see all bookings
+    if (role === 'admin') {
       query = Booking.find();
-    } else {
-      // If user is not admin, only get bookings where user is the tenant
-      // or user is the owner of the property
-      const properties = await Property.find({ owner: req.user._id });
-      const propertyIds = properties.map((property) => property._id);
-
-      query = Booking.find({
-        $or: [{ userId: req.user._id }, { property: { $in: propertyIds } }], // Changed tenant to userId
-      });
+    } 
+    // Owners can only see bookings for their properties
+    else if (role === 'owner') {
+      const properties = await Property.find({ owner: _id });
+      const propertyIds = properties.map(p => p._id);
+      query = Booking.find({ property: { $in: propertyIds } });
     }
 
-    // Add references
-    query = query
+    // Populate related data
+    const bookings = await query
       .populate({
-        path: "property",
-        select: "title images address price",
+        path: 'property',
+        select: 'title images address price'
       })
       .populate({
-        path: "userId", // Changed tenant to userId
-        select: "name email mobileNumber",
-      });
-
-    // Execute query
-    const bookings = await query;
+        path: 'userId',
+        select: 'name email mobileNumber'
+      })
+      .sort({ createdAt: -1 }); // Newest first
 
     res.status(200).json({
       success: true,
       count: bookings.length,
-      data: bookings,
+      data: bookings
     });
+
   } catch (error) {
-    console.error("Error getting bookings:", error);
-    res.status(400).json({
+    console.error('Error getting bookings:', error);
+    res.status(500).json({
       success: false,
-      message: error.message || "Failed to retrieve bookings",
+      message: 'Server error'
     });
   }
 };
-
 // @desc    Get single booking
 // @route   GET /api/bookings/:id
 // @access  Private
@@ -330,74 +326,7 @@ exports.updateBookingStatus = async (req, res) => {
 // @desc    Add message to booking (This seems to be for a different feature, ensure messages array exists in bookingSchema if used)
 // @route   POST /api/bookings/:id/messages
 // @access  Private
-exports.addBookingMessage = async (req, res) => {
-  try {
-    const { message } = req.body;
 
-    if (!message) {
-      return res.status(400).json({
-        success: false,
-        message: "Message is required",
-      });
-    }
-
-    const booking = await Booking.findById(req.params.id);
-
-    if (!booking) {
-      return res.status(404).json({
-        success: false,
-        message: "Booking not found",
-      });
-    }
-
-    // Get the property to check ownership
-    const property = await Property.findById(booking.propertyId); // Use propertyId
-    if (!property) {
-        return res.status(404).json({ success: false, message: "Associated property not found" });
-    }
-
-    const propertyOwnerId = property.owner ? property.owner.toString() : (property.host ? property.host.toString() : null);
-
-    // Check if user is authorized to add messages
-    if (
-      booking.userId.toString() !== req.user.id && // Check against userId
-      propertyOwnerId !== req.user.id &&
-      req.user.role !== "admin"
-    ) {
-      return res.status(401).json({
-        success: false,
-        message: "Not authorized to add messages to this booking",
-      });
-    }
-    
-    // Ensure booking.messages is an array
-    if (!Array.isArray(booking.messages)) {
-        booking.messages = [];
-    }
-
-    // Add message to booking
-    const newMessage = {
-      sender: req.user._id,
-      message,
-      timestamp: new Date(),
-      isRead: false, // Assuming this field exists in your message sub-document schema
-    };
-
-    booking.messages.push(newMessage);
-    await booking.save();
-
-    res.status(200).json({
-      success: true,
-      data: newMessage,
-    });
-  } catch (error) {
-    console.error("Error adding booking message:", error);
-    res.status(400).json({
-      success: false,
-      message: error.message || "Failed to add message",
-    });
-  }
-};
 
 // @desc    Get bookings for logged in tenant
 // @route   GET /api/bookings/my-bookings
@@ -468,6 +397,204 @@ exports.getPropertyBookings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to retrieve property bookings",
+    });
+  }
+};
+
+// Add message to a pending booking
+exports.addBookingMessage = async (req, res) => {
+  try {
+    // Validate message content
+    if (!req.body.message || typeof req.body.message !== 'string') {
+      return res.status(400).json({
+        success: false,
+        message: "Valid message content is required"
+      });
+    }
+
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      status: 'pending'
+    }).populate('propertyId', 'owner'); // Populate owner for verification
+
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Pending booking not found" 
+      });
+    }
+
+    // Verify user is either renter or owner
+    const isRenter = booking.userId.toString() === req.user._id.toString();
+    const isOwner = booking.propertyId.owner.toString() === req.user._id.toString();
+    
+    if (!isRenter && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to message this booking"
+      });
+    }
+
+    const newMessage = {
+      sender: req.user._id,
+      message: req.body.message,
+      attachments: req.body.attachments || []
+    };
+
+    booking.preBookingMessages.push(newMessage);
+    await booking.save();
+
+    // Populate sender info in response
+    const populatedMessage = {
+      ...newMessage,
+      sender: {
+        _id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        profileImage: req.user.profileImage
+      }
+    };
+
+    res.status(200).json({
+      success: true,
+      data: populatedMessage
+    });
+
+  } catch (error) {
+    console.error("Error adding message:", error);
+    res.status(500).json({
+      success: false,
+      message: process.env.NODE_ENV === 'development' 
+        ? error.message 
+        : "Failed to add message"
+    });
+  }
+};
+
+// Get all messages for a booking
+exports.getBookingMessages = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate({
+        path: 'preBookingMessages.sender',
+        select: 'name email profileImage'
+      })
+      .populate('propertyId', 'owner title');
+
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Booking not found" 
+      });
+    }
+
+    // Verify requester is either owner or renter
+    const isAuthorized = req.user._id.toString() === booking.userId.toString() || 
+                       req.user._id.toString() === booking.propertyId.owner.toString();
+
+    if (!isAuthorized && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to view these messages"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        messages: booking.preBookingMessages,
+        propertyTitle: booking.propertyId.title
+      }
+    });
+
+  } catch (error) {
+    console.error("Error fetching messages:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve messages"
+    });
+  }
+};
+
+// Negotiate booking terms
+exports.negotiateBookingTerms = async (req, res) => {
+  try {
+    // Validate negotiation data
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Negotiation data is required"
+      });
+    }
+
+    const booking = await Booking.findOne({
+      _id: req.params.id,
+      status: 'pending'
+    }).populate('propertyId', 'owner');
+
+    if (!booking) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Pending booking not found" 
+      });
+    }
+
+    // Verify requester is the property owner
+    if (req.user._id.toString() !== booking.propertyId.owner.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Only property owner can negotiate terms"
+      });
+    }
+
+    const validFields = ['price', 'checkIn', 'checkOut', 'guests'];
+    const changes = [];
+    const updatedFields = {};
+
+    // Process each negotiable field
+    for (const field of validFields) {
+      if (req.body[field] !== undefined) {
+        changes.push({
+          changedField: field,
+          oldValue: booking[field],
+          newValue: req.body[field],
+          changedBy: req.user._id,
+          changedAt: new Date()
+        });
+        updatedFields[field] = req.body[field];
+      }
+    }
+
+    if (changes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid fields provided for negotiation"
+      });
+    }
+
+    // Update booking and save history
+    const updatedBooking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: updatedFields,
+        $push: { negotiationHistory: { $each: changes } }
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      success: true,
+      data: {
+        updatedFields,
+        negotiationHistory: updatedBooking.negotiationHistory
+      }
+    });
+
+  } catch (error) {
+    console.error("Negotiation error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to process negotiation"
     });
   }
 };

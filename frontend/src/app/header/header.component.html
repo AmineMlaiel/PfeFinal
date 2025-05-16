@@ -17,7 +17,7 @@
 
       <!-- My Booking for all logged in users -->
       <ng-container *ngIf="isLoggedIn">
-        <a routerLink="/booking/my-bookings" routerLinkActive="active"  class="text-white hover:text-blue-400 transition">My Booking</a>
+        <a routerLink="/my-bookings" routerLinkActive="active"  class="text-white hover:text-blue-400 transition">My Bookings</a>
       </ng-container>
 
       <!-- Admin Links -->
@@ -30,6 +30,8 @@
       <ng-container *ngIf="isOwner && !isAdmin">
         <a routerLink="/properties/add" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">List a Property</a>
         <a routerLink="/properties/my-properties" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">My Properties</a>
+        <a routerLink="/demands" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">My Demands</a>
+    
       </ng-container>
 
       <a routerLink="/profile" routerLinkActive="text-blue-400" class="text-white hover:text-blue-400 transition">Profile</a>
@@ -68,7 +70,7 @@
 
     <!-- My Booking for all logged in users (Mobile) -->
     <ng-container *ngIf="isLoggedIn">
-      <a routerLink="../booking/my-bookings" routerLinkActive="active"  class="block text-white hover:text-blue-400 transition">My Booking</a>
+      <a routerLink="/my-bookings" routerLinkActive="active"  class="block text-white hover:text-blue-400 transition">My Bookings</a>
     </ng-container>
 
     <!-- Admin Links (Mobile) -->

@@ -72,6 +72,19 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Property",
     },
+     preBookingMessages: [{
+    sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    message: String,
+    attachments: [String],
+    createdAt: { type: Date, default: Date.now }
+  }],
+  negotiationHistory: [{
+    changedField: String,
+    oldValue: mongoose.Schema.Types.Mixed,
+    newValue: mongoose.Schema.Types.Mixed,
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    changedAt: { type: Date, default: Date.now }
+  }]
   },
   {
     timestamps: true,
