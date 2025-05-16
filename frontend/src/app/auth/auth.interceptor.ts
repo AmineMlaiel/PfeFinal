@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core'; // <<< Import Injector
 import {
   HttpRequest,
   HttpHandler,
@@ -11,20 +11,22 @@ import { catchError } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { Router } from '@angular/router';
 
-@Injectable()
+@Injectable( )
 export class AuthInterceptor implements HttpInterceptor {
-  constructor(private authService: AuthService, private router: Router) {}
+  // Remove AuthService from constructor, inject Injector instead
+  constructor(private injector: Injector, private router: Router) {}
 
   intercept(
     request: HttpRequest<unknown>,
     next: HttpHandler
   ): Observable<HttpEvent<unknown>> {
-    // Get the token from the auth service
-    const token = this.authService.getToken();
+    // Get AuthService lazily from the injector
+    const authService = this.injector.get(AuthService);
 
-    // If the token exists, add it to the Authorization header
+    // Get the token from the auth service
+    const token = authService.getToken();
+
     if (token) {
-      // Clone the request and add the Authorization header
       request = request.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`,
@@ -32,13 +34,15 @@ export class AuthInterceptor implements HttpInterceptor {
       });
     }
 
-    // Pass the request to the next handler
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        // Handle 401 Unauthorized errors (token expired or invalid)
         if (error.status === 401) {
-          this.authService.logout(); // Clear local storage and redirect to login
-          this.router.navigate(['/login']);
+          // Get AuthService again here if you need to call logout, 
+          // or ensure the instance from above is still in scope and valid.
+          const authServiceInstance = this.injector.get(AuthService);
+          authServiceInstance.logout(); 
+          // Note: router.navigate might also cause issues if Router itself is part of a cycle
+          // but usually it is fine. The primary issue is AuthService here.
         }
         return throwError(() => error);
       })

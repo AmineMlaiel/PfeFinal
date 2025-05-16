@@ -104,9 +104,11 @@ export const routes: Routes = [
     component: PropertyUpdateComponent,
   },
   {
-    path: 'demands',
-    component: DemandsComponent,
-  },
+  path: 'demands',
+  component:DemandsComponent,
+  canActivate: [authGuard] // si besoin
+},
+
   {
     path: 'property/:id',
     component: PropertyDetailsComponent

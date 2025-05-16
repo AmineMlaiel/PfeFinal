@@ -17,38 +17,63 @@ export class AuthService {
   private apiUrl = 'http://localhost:3900/api/users';
   private loggedIn = new BehaviorSubject<boolean>(false);
   private currentUserSubject = new BehaviorSubject<any>(null);
+    private authCheckCompleted = new BehaviorSubject<boolean>(false);
+
+    authCheckCompleted$ = this.authCheckCompleted.asObservable();
 
    constructor(private http: HttpClient, private router: Router) {
     this.initializeAuthState();
   }
 
-  private initializeAuthState(): void {
-    if (typeof window !== 'undefined') {
-      const token = this.getToken();
-      if (token) {
-        this.getUserProfile().subscribe({
-          next: (user) => {
-            if (user) {
-              localStorage.setItem('user', JSON.stringify(user));
-              this.currentUserSubject.next(user);
-              this.loggedIn.next(true);
-            } else {
-              // If getUserProfile succeeds but returns no user, treat as logout
-              this.logout();
-            }
-          },
-          error: (err) => {
-            console.error('Failed to initialize auth state by fetching profile:', err);
-            this.logout(); // Token might be invalid/expired
-          }
-        });
-      } else {
-        // No token, ensure logged out state
-        this.loggedIn.next(false);
-        this.currentUserSubject.next(null);
-      }
+ private initializeAuthState(): void {
+    if (typeof window === 'undefined') {
+      this.authCheckCompleted.next(true);
+      return;
     }
+
+    const token = this.getToken();
+    if (!token) {
+      this.loggedIn.next(false);
+      this.currentUserSubject.next(null);
+      this.authCheckCompleted.next(true);
+      return;
+    }
+
+    // Set initial state optimistically
+    const userData = this.getUserData();
+    if (userData) {
+      this.currentUserSubject.next(userData);
+      this.loggedIn.next(true);
+    }
+
+    // Then verify with server
+    this.getUserProfile().subscribe({
+      next: (userProfile) => {
+        if (userProfile?._id) {
+          localStorage.setItem('user', JSON.stringify(userProfile));
+          this.currentUserSubject.next(userProfile);
+          this.loggedIn.next(true);
+        } else {
+          this.cleanUpAndNavigate();
+        }
+        this.authCheckCompleted.next(true);
+      },
+      error: (err) => {
+        console.error('Profile fetch error:', err);
+        this.cleanUpAndNavigate();
+        this.authCheckCompleted.next(true);
+      }
+    });
   }
+
+  private cleanUpAndNavigate(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    this.loggedIn.next(false);
+    this.currentUserSubject.next(null);
+    // Don't navigate here - let the guard handle it
+  }
+
 
   getHttpHeaders(): HttpHeaders {
     if (typeof window === 'undefined') {
@@ -102,11 +127,15 @@ export class AuthService {
       .pipe(catchError(this.handleError));
   }
 
-  getUserProfile(): Observable<any> {
-    return this.http
-      .get(`${this.apiUrl}/profile`, this.getHttpOptions())
-      .pipe(catchError(this.handleError));
-  }
+ getUserProfile(): Observable<any> {
+  return this.http
+    .get(`${this.apiUrl}/profile`, this.getHttpOptions( ))
+    .pipe(
+      map((response: any) => response.user), // Extract the user object from the response
+      catchError(this.handleError)
+    );
+}
+
 
   updateProfile(userData: any): Observable<any> {
     return this.http

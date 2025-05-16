@@ -27,6 +27,13 @@ export class BookingService {
       headers,
     });
   }
+  // get all bookings for the owner
+  getOwnerBookings(): Observable<BookingResponse> {
+  const headers = this.authService.getHttpHeaders();
+  return this.http.get<BookingResponse>(`${this.apiUrl}/`, {
+    headers,
+  });
+}
 
   // Get bookings for a specific property (for owner)
   getPropertyBookings(propertyId: string): Observable<BookingResponse> {
@@ -108,6 +115,28 @@ export class BookingService {
     }>(`${this.apiUrl}/calculate`, { propertyId, bookingMonth, guests });
   }
 
+      //get messages between owner and client 
+   getMessages(bookingId: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/${bookingId}/messages`, {
+      headers: this.authService.getHttpHeaders()
+    });
+  }
+
+  // Send a new message
+  sendMessage(bookingId: string, message: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/${bookingId}/messages`, 
+      { message },
+      { headers: this.authService.getHttpHeaders() }
+    );
+  }
+
+  // Get bookings by status (for owner dashboard)
+  getBookingsByStatus(status: string): Observable<any> {
+    return this.http.get(`${this.apiUrl}/owner/${status}`, {
+      headers: this.authService.getHttpHeaders()
+    });
+  }
+
   // Check if a property is available for specific month - updated for monthly booking
  checkAvailability(
   propertyId: string,
@@ -127,3 +156,4 @@ export class BookingService {
     { propertyId, bookingMonth, bookingDate }
   );
 }}
+

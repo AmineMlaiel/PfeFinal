@@ -27,9 +27,9 @@ export class AdminLayoutComponent implements OnInit {
 
  navigationItems: { label: string; route: string; icon: IconDefinition }[] = [
   { label: 'Dashboard', route: '/admin/dashboard', icon: faTachometerAlt },
-  { label: 'Users', route: '/admin/users', icon: faUsers },
+  { label: 'Users', route: '/admin/dashboard', icon: faUsers },
   { label: 'Properties', route: '/admin/properties', icon: faBuilding },
-  { label: 'Bookings', route: '/admin/bookings', icon: faCalendarCheck },
+  { label: 'Bookings', route: '/demands', icon: faCalendarCheck },
   { label: 'Reports', route: '/admin/reports', icon: faChartBar },
   { label: 'Settings', route: '/admin/settings', icon: faCog }
 ];
