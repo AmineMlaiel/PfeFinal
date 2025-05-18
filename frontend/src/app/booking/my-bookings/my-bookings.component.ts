@@ -3,7 +3,37 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { BookingService } from '../../services/booking.service';
 import { AuthService } from '../../auth/auth.service';
-import { Booking } from '../../models/booking.model';
+import { Booking } from '../../models/booking.model';import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+// interfaces
+interface User {
+  _id?: string;
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  FirstName?: string;
+  LastName?: string;
+  profileImage?: string;
+}
+
+interface booking {
+  _id: string;
+  conversation?: Array<{
+    message: string;
+    sender: User;
+    createdAt: Date;
+  }>;
+}
+interface RawMessage {
+  _id: string;
+  message: string;
+  sender: {
+    _id: string;
+    name: string;
+  };
+  attachments?: any[];
+  createdAt: string;
+}
 
 @Component({
   selector: 'app-my-bookings',
@@ -19,6 +49,13 @@ export class MyBookingsComponent implements OnInit {
   error: string | null = null;
   activeFilter: 'all' | 'upcoming' | 'past' | 'cancelled' = 'all';
   isUserLoggedIn = false;
+  // chat variables
+  demands: booking[] = [];
+  message: string = '';
+  isLoadingMessages: { [demandId: string]: boolean } = {};
+  isSending: boolean = false;
+  private messageDebounceTimer: any;
+
   
   // For delete confirmation modal
   showDeleteModal = false;
@@ -39,12 +76,15 @@ export class MyBookingsComponent implements OnInit {
         this.loading = false;
         return;
       }
-
+        
       // Only load bookings if the user is logged in
       this.loadBookings();
     });
   }
-
+  // chat methodes
+  
+  
+  
   loadBookings(): void {
     if (!this.isUserLoggedIn) {
       this.error = 'You must be logged in to view your bookings.';
@@ -254,4 +294,65 @@ canDeleteBooking(booking: Booking): boolean {
         return '';
     }
   }
+    async getMessages(demand: booking): Promise<void> {
+    if (!demand._id) return;
+    try {
+      this.isLoadingMessages[demand._id] = true;
+      const response = await this.bookingService.getMessages(demand._id).toPromise();
+      if (response?.success && response.data?.messages) {
+        demand.conversation = (response.data.messages as RawMessage[]).map((message) => ({
+          _id: message._id,
+          message: message.message,
+          sender: {
+            _id: message.sender._id,
+            firstName: message.sender.name.split(' ')[0],
+            lastName: message.sender.name.split(' ')[1] || '',
+            profileImage: ''
+          },
+          attachments: message.attachments || [],
+          createdAt: new Date(message.createdAt)
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load messages', error);
+    } finally {
+      this.isLoadingMessages[demand._id] = false;
+    }
+  }
+
+  async sendMessage(demand: booking, index: number): Promise<void> {
+    if (!this.message.trim()) return;
+    clearTimeout(this.messageDebounceTimer);
+    this.messageDebounceTimer = setTimeout(async () => {
+      try {
+        this.isSending = true;
+        const response = await this.bookingService.sendMessage(demand._id, this.message).toPromise();
+        if (response?.success && response.conversation) {
+          const newMessage = {
+            _id: response.conversation._id,
+            message: response.conversation.message,
+            sender: {
+              _id: response.conversation.sender._id,
+              firstName: response.conversation.sender.name.split(' ')[0],
+              lastName: response.conversation.sender.name.split(' ')[1] || '',
+              profileImage: ''
+            },
+            attachments: response.conversation.attachments || [],
+            createdAt: new Date(response.conversation.createdAt)
+          };
+          if (demand.conversation) {
+            demand.conversation.push(newMessage);
+          } else {
+            demand.conversation = [newMessage];
+          }
+          this.message = '';
+        }
+      } catch (error) {
+        console.error('Failed to send message', error);
+      } finally {
+        this.isSending = false;
+      }
+    }, 500);
+  }
+
 }

@@ -414,7 +414,7 @@ exports.addBookingMessage = async (req, res) => {
 
     const booking = await Booking.findOne({
       _id: req.params.id,
-      status: 'pending'
+      status: { $in: ['pending', 'confirmed', 'cancelled'] }
     }).populate('propertyId', 'owner'); // Populate owner for verification
 
     if (!booking) {
