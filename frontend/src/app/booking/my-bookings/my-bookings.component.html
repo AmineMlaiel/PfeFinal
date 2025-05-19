@@ -8,28 +8,16 @@
 
   <!-- Filter tabs -->
   <div class="filter-tabs">
-    <button
-      [class.active]="activeFilter === 'all'"
-      (click)="applyFilter('all')"
-    >
+    <button [class.active]="activeFilter === 'all'" (click)="applyFilter('all')">
       All Bookings
     </button>
-    <button
-      [class.active]="activeFilter === 'upcoming'"
-      (click)="applyFilter('upcoming')"
-    >
+    <button [class.active]="activeFilter === 'upcoming'" (click)="applyFilter('upcoming')">
       Upcoming
     </button>
-    <button
-      [class.active]="activeFilter === 'past'"
-      (click)="applyFilter('past')"
-    >
+    <button [class.active]="activeFilter === 'past'" (click)="applyFilter('past')">
       Past
     </button>
-    <button
-      [class.active]="activeFilter === 'cancelled'"
-      (click)="applyFilter('cancelled')"
-    >
+    <button [class.active]="activeFilter === 'cancelled'" (click)="applyFilter('cancelled')">
       Cancelled
     </button>
   </div>
@@ -47,28 +35,19 @@
       <p>{{ error }}</p>
     </div>
 
-    <!-- Show login button only if user isn't logged in -->
     <ng-container *ngIf="!isUserLoggedIn">
-      <a
-        routerLink="/login"
-        [queryParams]="{ returnUrl: '/my-bookings' }"
-        class="btn-primary"
-      >
+      <a routerLink="/login" [queryParams]="{ returnUrl: '/my-bookings' }" class="btn-primary">
         <i class="fa fa-sign-in-alt"></i> Log In
       </a>
     </ng-container>
 
-    <!-- Show retry button only if user is logged in -->
     <button *ngIf="isUserLoggedIn" (click)="loadBookings()" class="btn-retry">
       <i class="fa fa-sync"></i> Try Again
     </button>
   </div>
 
   <!-- Empty state -->
-  <div
-    *ngIf="!loading && !error && bookings.length === 0"
-    class="empty-container"
-  >
+  <div *ngIf="!loading && !error && bookings.length === 0" class="empty-container">
     <div class="empty-state">
       <i class="fa fa-calendar"></i>
       <h2>No Bookings Found</h2>
@@ -80,22 +59,13 @@
   </div>
 
   <!-- Empty filter state -->
-  <div
-    *ngIf="
-      !loading && !error && bookings.length > 0 && filteredBookings.length === 0
-    "
-    class="empty-container"
-  >
+  <div *ngIf="!loading && !error && bookings.length > 0 && filteredBookings.length === 0" class="empty-container">
     <div class="empty-state">
       <i class="fa fa-filter"></i>
       <h2>No Bookings Match Filter</h2>
-      <p *ngIf="activeFilter === 'upcoming'">
-        You don't have any upcoming bookings.
-      </p>
+      <p *ngIf="activeFilter === 'upcoming'">You don't have any upcoming bookings.</p>
       <p *ngIf="activeFilter === 'past'">You don't have any past bookings.</p>
-      <p *ngIf="activeFilter === 'cancelled'">
-        You don't have any cancelled bookings.
-      </p>
+      <p *ngIf="activeFilter === 'cancelled'">You don't have any cancelled bookings.</p>
       <button (click)="applyFilter('all')" class="btn-primary">
         <i class="fa fa-list"></i> View All Bookings
       </button>
@@ -103,19 +73,14 @@
   </div>
 
   <!-- Bookings list -->
-  <div
-    *ngIf="!loading && !error && filteredBookings.length > 0"
-    class="bookings-list"
-  >
-    <div class="booking-card" *ngFor="let booking of filteredBookings">
+  <div *ngIf="!loading && !error && filteredBookings.length > 0" class="bookings-list">
+    <div class="booking-card" *ngFor="let booking of filteredBookings; let i = index">
       <!-- Property image -->
       <div class="booking-image">
         <img
-          [src]="
-            booking.property?.images && booking.property!.images.length > 0
-              ? booking.property!.images[0]
-              : 'assets/images/property-placeholder.jpg'
-          "
+          [src]="booking.property?.images && booking.property!.images.length > 0
+            ? booking.property!.images[0]
+            : 'assets/images/property-placeholder.jpg'"
           [alt]="booking.property?.title || 'Property'"
           class="property-img"
         />
@@ -137,14 +102,12 @@
         </p>
 
         <div class="booking-dates">
-          <!-- Show booking month instead of check-in/check-out dates -->
           <div class="date-item">
             <span class="date-label">Booking Month:</span>
             <span class="date-value">
-          {{ booking.bookingMonth ? formatMonth(booking.bookingMonth) : '—' }}
-          </span>
+              {{ booking.bookingMonth ? formatMonth(booking.bookingMonth) : '—' }}
+            </span>
           </div>
-          <!-- Keep check-in/check-out for backward compatibility -->
           <div class="date-item" *ngIf="!booking.bookingMonth && booking.checkIn">
             <span class="date-label">Check-in:</span>
             <span class="date-value">{{ formatDate(booking.checkIn) }}</span>
@@ -155,12 +118,9 @@
           </div>
           <div class="date-item" *ngIf="!booking.bookingMonth && booking.checkIn && booking.checkOut">
             <span class="date-label">Duration:</span>
-            <span class="date-value"
-              >{{
-                calculateNights(booking.checkIn, booking.checkOut)
-              }}
-              nights</span
-            >
+            <span class="date-value">
+              {{ calculateNights(booking.checkIn, booking.checkOut) }} nights
+            </span>
           </div>
         </div>
 
@@ -187,6 +147,124 @@
         <a [routerLink]="['/properties', booking.propertyId]" class="btn-view">
           <i class="fa fa-eye"></i> View Property
         </a>
+        <!-- Toggle Button -->
+        <button (click)="booking._id && toggleChat(booking._id)" class="chat-toggle-btn">
+          <i class="fa fa-comments"></i> 
+          {{activeChat === booking._id ? 'Close Chat' : 'Open Chat'}}
+        </button>
+                <!-- Chat Conversation - Modern UI -->
+                 <div *ngIf="activeChat === booking._id">
+        <div *ngIf="$any(booking).conversation" class="mt-4 border-t border-gray-700 pt-4 bg-gray-800 rounded-lg overflow-hidden">
+          <!-- Chat Header -->
+          <div class="px-4 py-3 bg-gray-900 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-violet-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-1.008l-4.354 1.452a.75.75 0 01-.937-.941l1.452-4.354A6.75 6.75 0 011 10c0-3.866 3.582-7 8-7s9 3.134 9 7zM5 9a1 1 0 011-1h8a1 1 0 110 2H6a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H6z" clip-rule="evenodd" />
+              </svg>
+              <h3 class="text-sm font-medium text-white">Conversation</h3>
+            </div>
+            <button (click)="getMessages($any(booking))" class="text-xs text-violet-400 hover:text-violet-300 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          </div>
+          
+          <!-- Messages Container -->
+          <div class="max-h-64 overflow-y-auto p-3 space-y-3">
+            <!-- Loading state -->
+        <div *ngIf="booking._id && isLoadingMessages[booking._id]" class="flex justify-center py-3">
+              <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-violet-500"></div>
+            </div>
+            
+            <!-- No messages state -->
+          <div *ngIf="booking._id &&!isLoadingMessages[booking._id] && (!$any(booking).conversation || $any(booking).conversation.length === 0)" 
+                class="text-center text-gray-500 py-4 italic text-sm">
+              No messages yet
+            </div>
+            
+            <!-- Messages -->
+            <div *ngFor="let message of $any(booking).conversation" 
+                class="flex" 
+                [ngClass]="{'justify-end': message?.sender?._id === currentUserId}">
+              <div class="flex max-w-[75%]" 
+                  [ngClass]="{'flex-row-reverse': message?.sender?._id === currentUserId}">
+                
+                <!-- Avatar -->
+                <div class="flex-shrink-0">
+                  <div class="h-8 w-8 rounded-full overflow-hidden bg-gray-700 flex items-center justify-center text-sm font-medium text-white">
+                    <img *ngIf="message?.sender?.profileImage" 
+                        [src]="message?.sender?.profileImage" 
+                        class="h-full w-full object-cover"
+                        onerror="this.style.display='none'"
+                        alt="Profile image">
+                    <span *ngIf="!message?.sender?.profileImage || message?.sender?.profileImage === ''" 
+                          class="h-full w-full flex items-center justify-center bg-violet-700">
+                      {{message?.sender?.firstName?.charAt(0) || 'U'}}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Message content -->
+                <div class="flex flex-col ml-2 mr-2 max-w-[calc(100%-2.5rem)]">
+                  <div class="px-3 py-2 rounded-lg" 
+                      [ngClass]="{
+                        'bg-violet-800 text-white': message?.sender?._id !== currentUserId, 
+                        'bg-pink-500 text-white': message?.sender?._id === currentUserId
+                      }">
+                    <!-- Sender name -->
+                    <div class="text-xs font-bold mb-1 opacity-75">
+                      {{message?.sender?.firstName || 'User'}}
+                    </div>
+                    <!-- Message text with word break -->
+                    <div class="text-sm break-words whitespace-pre-wrap">{{message?.message}}</div>
+                  </div>
+                  
+                  <!-- Timestamp -->
+                  <div class="text-xs text-gray-400 mt-1" 
+                      [ngClass]="{'text-right': message?.sender?._id === currentUserId, 'text-left': message?.sender?._id !== currentUserId}">
+                    {{message?.createdAt | date:'shortTime'}}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Message Input Area -->
+          <div class="p-3 bg-gray-900 border-t border-gray-700">
+            <div class="relative flex">
+              <textarea #messageInput
+                        [(ngModel)]="message"
+                        (keydown.enter)="$event.preventDefault(); sendMessage($any(booking), i)"
+                        maxlength="500"
+                        class="flex-grow px-4 py-2 bg-gray-800 border border-gray-700 text-white rounded-l-lg focus:outline-none focus:ring-2 focus:ring-violet-600 resize-none"
+                        rows="2"
+                        placeholder="Type your message..."></textarea>
+              
+              <button (click)="message = messageInput.value; sendMessage($any(booking), i)"
+                      [disabled]="!messageInput.value.trim() || isSending"
+                      class="bg-pink-500 hover:bg-pink-600 disabled:opacity-50 disabled:bg-pink-800 text-white px-4 rounded-r-lg flex items-center justify-center transition">
+                <span *ngIf="isSending">
+                  <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                </span>
+                <span *ngIf="!isSending">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </span>
+              </button>
+            </div>
+            
+            <!-- Character counter -->
+            <div class="text-right mt-1 text-xs text-gray-500">
+              {{message.length}}/500
+            </div>
+          </div>
+        </div>
 
         <button
           *ngIf="canCancelBooking(booking)"
@@ -196,7 +274,6 @@
           <i class="fa fa-times"></i> Cancel Booking
         </button>
         
-        <!-- Add delete button for pending bookings -->
         <button
           *ngIf="canDeleteBooking(booking)"
           (click)="confirmDeleteBooking(booking._id || '')"
@@ -205,77 +282,69 @@
           <i class="fa fa-trash"></i> Delete Request
         </button>
       </div>
+
+      <!-- Chat Conversation with $any() type casting -->
+      <!-- <div *ngIf="$any(booking).conversation" class="booking-chat">
+        <div class="chat-messages">
+          <div *ngFor="let message of $any(booking).conversation" class="message">
+            <div class="message-header">
+              <span class="sender">{{message.sender?.firstName}}</span>
+              <span class="time">{{message.createdAt | date:'shortTime'}}</span>
+            </div>
+            <div class="message-content">{{message.message}}</div>
+          </div>
+        </div>
+        
+        <div class="chat-input">
+          <textarea 
+            #messageInput
+            placeholder="Type your message..."
+            (keydown.enter)="message = messageInput.value; sendMessage($any(booking), i)"></textarea>
+          <button 
+            (click)="message = messageInput.value; sendMessage($any(booking), i)"
+            [disabled]="!messageInput.value.trim() || isSending">
+            <i class="fa fa-paper-plane"></i>
+          </button>
+        </div>
+      </div> -->
     </div>
   </div>
   
   <!-- Delete Confirmation Modal -->
-  <div 
-  *ngIf="showDeleteModal"
-  class="fixed inset-0 z-50 overflow-y-auto"
-  aria-labelledby="modal-title"
-  role="dialog"
-  aria-modal="true"
->
-  <!-- Background overlay -->
-  <div 
-    class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-    (click)="showDeleteModal = false"
-  ></div>
-
-  <!-- Modal container -->
-  <div class="flex min-h-screen items-end justify-center p-4 text-center sm:items-center sm:p-0">
-    <!-- Modal content -->
-    <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-      <!-- Header -->
-      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-        <div class="flex items-start justify-between">
-          <div class="mt-3 text-center sm:mt-0 sm:text-left">
-            <h3 
-              class="text-lg font-medium leading-6 text-gray-900"
-              id="modal-title"
-            >
-              Confirm Deletion
-            </h3>
+  <div *ngIf="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" (click)="showDeleteModal = false"></div>
+    <div class="flex min-h-screen items-end justify-center p-4 text-center sm:items-center sm:p-0">
+      <div class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+          <div class="flex items-start justify-between">
+            <div class="mt-3 text-center sm:mt-0 sm:text-left">
+              <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">
+                Confirm Deletion
+              </h3>
+            </div>
+            <button type="button" class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none" (click)="showDeleteModal = false">
+              <span class="sr-only">Close</span>
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <button
-            type="button"
-            class="inline-flex rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none"
-            (click)="showDeleteModal = false"
-          >
-            <span class="sr-only">Close</span>
-            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
+        </div>
+        <div class="px-4 py-3 sm:px-6">
+          <div class="text-sm text-gray-500">
+            <p>Are you sure you want to delete this booking request?</p>
+            <p class="mt-1">This action cannot be undone.</p>
+          </div>
+        </div>
+        <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+          <button type="button" class="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm" (click)="deleteBooking()">
+            Delete
+          </button>
+          <button type="button" class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" (click)="showDeleteModal = false">
+            Cancel
           </button>
         </div>
       </div>
-
-      <!-- Body -->
-      <div class="px-4 py-3 sm:px-6">
-        <div class="text-sm text-gray-500">
-          <p>Are you sure you want to delete this booking request?</p>
-          <p class="mt-1">This action cannot be undone.</p>
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-        <button
-          type="button"
-          class="inline-flex w-full justify-center rounded-md border border-transparent bg-red-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm"
-          (click)="deleteBooking()"
-        >
-          Delete
-        </button>
-        <button
-          type="button"
-          class="mt-3 inline-flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          (click)="showDeleteModal = false"
-        >
-          Cancel
-        </button>
-      </div>
     </div>
   </div>
-</div>
 </div>
