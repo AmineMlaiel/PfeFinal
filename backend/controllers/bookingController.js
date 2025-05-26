@@ -1,6 +1,7 @@
 const Booking = require("../models/bookingModel");
 const Property = require("../models/propertyModel");
 const User = require("../models/userModel");
+const { sendMessageNotification } = require("../utils/mailSender")
 const mongoose = require("mongoose");
 
 
@@ -414,7 +415,7 @@ exports.addBookingMessage = async (req, res) => {
 
     const booking = await Booking.findOne({
       _id: req.params.id,
-      status: 'pending'
+      status: { $in: ['pending', 'confirmed', 'cancelled'] }
     }).populate('propertyId', 'owner'); // Populate owner for verification
 
     if (!booking) {
@@ -919,6 +920,145 @@ exports.deleteBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to delete booking",
+    });
+  }
+};
+
+
+
+exports.sendMessage = async (req, res) => {
+  try {
+    const { bookingId, messageContent, message } = req.body;
+    const userId = req.user?.id;
+    const actualMessage = messageContent || message;
+
+    if (!bookingId || !actualMessage || !userId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    console.log('Processing message for booking:', bookingId);
+
+    // Get booking without population first
+    const booking = await Booking.findById(bookingId);
+    
+    if (!booking) {
+      return res.status(404).json({ error: 'Booking not found' });
+    }
+
+    console.log('Booking found:', {
+      userId: booking.userId || booking.user,
+      propertyId: booking.propertyId || booking.property
+    });
+
+    // Add message to booking
+    booking.preBookingMessages.push({
+      sender: userId,
+      message: actualMessage,
+      timestamp: new Date(),
+      createdAt: new Date()
+    });
+
+    await booking.save();
+    console.log('✓ Message saved successfully');
+
+    // Now get the users and property separately to avoid population issues
+    let bookingUser, property, propertyOwner;
+    
+    try {
+      // Get booking user
+      const bookingUserId = booking.userId || booking.user;
+      if (bookingUserId) {
+        bookingUser = await User.findById(bookingUserId);
+        console.log('Booking user found:', bookingUser?.email);
+      }
+
+      // Get property and property owner
+      const propertyId = booking.propertyId || booking.property;
+      if (propertyId) {
+        property = await Property.findById(propertyId).populate('owner');
+        // OR if owner is not populated, try:
+        // property = await Property.findById(propertyId);
+        // propertyOwner = await User.findById(property.owner);
+        
+        propertyOwner = property?.owner;
+        console.log('Property found:', property?.title);
+        console.log('Property owner found:', propertyOwner?.email);
+      }
+    } catch (fetchError) {
+      console.error('Error fetching related data:', fetchError);
+      // Continue without email notification
+      return res.status(200).json({ 
+        message: 'Message sent but could not send email notification',
+        messageId: booking.preBookingMessages[booking.preBookingMessages.length - 1]._id
+      });
+    }
+
+    // Determine sender and receiver
+    let sender, receiver, senderName;
+    
+    if (bookingUser && bookingUser._id.toString() === userId) {
+      // Current user is the booking user, send email to property owner
+      sender = bookingUser;
+      receiver = propertyOwner;
+      senderName = bookingUser.firstName || bookingUser.name || 'Guest';
+      console.log('Booking user messaging property owner');
+    } else if (propertyOwner && propertyOwner._id.toString() === userId) {
+      // Current user is the property owner, send email to booking user
+      sender = propertyOwner;
+      receiver = bookingUser;
+      senderName = propertyOwner.firstName || propertyOwner.name || 'Property Owner';
+      console.log('Property owner messaging booking user');
+    } else {
+      console.log('Could not determine sender/receiver relationship');
+      return res.status(200).json({ 
+        message: 'Message sent but could not determine recipient for email',
+        messageId: booking.preBookingMessages[booking.preBookingMessages.length - 1]._id
+      });
+    }
+
+    if (!receiver || !receiver.email) {
+      console.log('Receiver email not found');
+      return res.status(200).json({ 
+        message: 'Message sent but recipient email not available',
+        messageId: booking.preBookingMessages[booking.preBookingMessages.length - 1]._id
+      });
+    }
+
+    // Send email notification
+    try {
+      console.log(`Sending email to: ${receiver.email}`);
+      console.log(`From: ${senderName}`);
+      console.log(`Property: ${property?.title || 'Property'}`);
+      
+      await sendMessageNotification(
+        receiver.email,
+        senderName,
+        property?.title || 'Property',
+        actualMessage
+      );
+      
+      console.log('✓ Email notification sent successfully');
+      
+      res.status(200).json({ 
+        message: 'Message sent and notification email delivered',
+        messageId: booking.preBookingMessages[booking.preBookingMessages.length - 1]._id,
+        emailSentTo: receiver.email
+      });
+      
+    } catch (emailError) {
+      console.error('Email sending failed:', emailError);
+      res.status(200).json({ 
+        message: 'Message sent but email notification failed',
+        messageId: booking.preBookingMessages[booking.preBookingMessages.length - 1]._id,
+        emailError: emailError.message
+      });
+    }
+
+  } catch (err) {
+    console.error('Error:', err.message);
+    res.status(500).json({ 
+      error: 'Something went wrong while sending the message.',
+      details: err.message
     });
   }
 };

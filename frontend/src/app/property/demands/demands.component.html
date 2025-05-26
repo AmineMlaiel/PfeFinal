@@ -60,7 +60,7 @@
         <!-- Demand Header -->
         <div class="bg-violet-950 p-4 flex justify-between items-center cursor-pointer" (click)="demand.expanded = !demand.expanded">
           <div class="flex items-center space-x-4">
-            <div class="font-medium text-white truncate max-w-xs">{{demand.annonceInfos?.titre}}</div>
+            <div class="font-medium text-white truncate max-w-xs">{{demand.property?.title}}</div>
             <span class="text-xs text-gray-300">{{demand.createdAt | date:'shortDate'}}</span>
           </div>
           <div class="flex items-center space-x-4">
@@ -120,13 +120,13 @@
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                   </svg>
-                  <span>{{demand.annonceInfos?.titre}}</span>
+                  <span>{{demand.property?.title}}</span>
                 </div>
                 <div class="flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>{{demand.annonceInfos?.price}} €/mois</span>
+                  <span>{{demand.property?.price}} €/mois</span>
                 </div>
               </div>
             </div>
@@ -158,36 +158,77 @@
           </div>
 
           <!-- Chat Messages -->
-          <div class="mb-6">
-            <h4 class="font-medium text-gray-300 mb-3">Conversation</h4>
-            <div class="space-y-4 max-h-64 overflow-y-auto p-2">
-              <div *ngIf="!demand.conversation || demand.conversation.length === 0" class="text-center text-gray-500 py-4">
-                Aucun message échangé
-              </div>
-              <div *ngFor="let message of demand.conversation" 
-                   class="flex" 
-                   [ngClass]="{'justify-end': message?.sender?.firstName === ownerName}">
-                <div class="flex max-w-3/4" [ngClass]="{'flex-row-reverse': message?.sender?.firstName === ownerName}">
-                  <img [src]="transformImgUrl(message?.sender?.profileImage ?? 'assets/default-avatar.jpg')" />
-
-                       class="h-10 w-10 rounded-full object-cover mx-2" 
-                       alt="Profile">
-                  <div class="flex flex-col max-w-xs">
-                    <div class="p-3 rounded-lg" 
-                         [ngClass]="{'bg-violet-800': message?.sender?.firstName !== ownerName, 
-                                    'bg-pink-500': message?.sender?.firstName === ownerName}">
-                      <div class="text-xs font-bold mb-1">{{message?.sender?.firstName}}</div>
-                      <div>{{message?.message}}</div>
-                    </div>
-                    <div class="text-xs text-gray-400 mt-1 text-right">
-                      {{message.createdAt | date:'shortTime'}}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <!-- Chat Messages -->
+<div class="mb-6">
+  <div class="flex justify-between items-center mb-3">
+    <h4 class="font-medium text-gray-300">Conversation</h4>
+    <!-- Refresh button -->
+    <button (click)="getMessages(demand)" 
+            class="text-xs text-violet-400 hover:text-violet-300 flex items-center"
+            [disabled]="isLoadingMessages[demand._id]">
+      <svg xmlns="http://www.w3.org/2000/svg" 
+           class="h-4 w-4 mr-1" 
+           fill="none" 
+           viewBox="0 0 24 24" 
+           stroke="currentColor">
+        <path stroke-linecap="round" 
+              stroke-linejoin="round" 
+              stroke-width="2" 
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Actualiser
+    </button>
+  </div>
+  
+  <div class="space-y-4 max-h-64 overflow-y-auto p-2">
+    <!-- Loading state -->
+    <div *ngIf="isLoadingMessages[demand._id]" class="flex justify-center py-4">
+      <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-violet-500"></div>
+    </div>
+    
+    <!-- No messages -->
+    <div *ngIf="!isLoadingMessages[demand._id] && (!demand.conversation || demand.conversation.length === 0)" 
+         class="text-center text-gray-500 py-4">
+      Aucun message échangé
+    </div>
+    
+    <!-- Messages list -->
+    <div *ngFor="let message of demand.conversation || []" 
+         class="flex" 
+         [ngClass]="{'justify-end': message?.sender?._id === currentUserId}">
+      <div class="flex max-w-3/4" 
+           [ngClass]="{'flex-row-reverse': message?.sender?._id === currentUserId}">
+        
+        <!-- Profile image with fallback -->
+        <img [src]="message?.sender?.profileImage || 'assets/favicon-96x96.png'"
+             class="h-10 w-10 rounded-full object-cover mx-2" 
+             alt="Profile image"
+             onerror="this.src='assets/favicon-96x96.png'">
+        
+        <!-- Message bubble -->
+        <div class="flex flex-col max-w-xs">
+          <div class="p-3 rounded-lg" 
+               [ngClass]="{
+                 'bg-violet-800': message?.sender?._id !== currentUserId, 
+                 'bg-pink-500': message?.sender?._id === currentUserId
+               }">
+            <div class="text-xs font-bold mb-1">
+              {{message?.sender?.firstName}}
             </div>
+            <div>{{message?.message}}</div>
+            
+            <!-- Attachments -->
+           
+          
+          <!-- Message timestamp -->
+          <div class="text-xs text-gray-400 mt-1 text-right">
+            {{message?.createdAt | date:'shortTime'}}
           </div>
-
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
           <!-- Message Input -->
           <div *ngIf="demand.statut !== 'Refusée'" class="mt-4">
             <div class="relative">
