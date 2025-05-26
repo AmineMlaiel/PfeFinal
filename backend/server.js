@@ -67,6 +67,7 @@ app
   .listen(port, () => {
     console.log(`Server running on http://localhost:${port}`);
     console.log("Mongo URI:", process.env.MONGO_URI); // for debugging
+    console.log("check dotenv:", process.env.EMAIL_USER, " ", process.env.EMAIL_PASS)
 
   })
   .on("error", (error) => {
