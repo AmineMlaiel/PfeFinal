@@ -13,6 +13,7 @@ const {
   checkAvailability,
   calculateBookingPrice,
   deleteBooking,
+  sendMessage
 } = require("../controllers/bookingController");
 const { protect, admin ,authorize} = require("../middleware/authMiddleware");
 
@@ -33,6 +34,7 @@ router.put("/:id/status", protect, updateBookingStatus);
 router.post("/:id/messages", protect, addBookingMessage);
 router.get("/:id/messages", protect, getBookingMessages);
 router.post("/:id/negotiate", protect, negotiateBookingTerms);
+router.post('/send', protect, sendMessage );
 
 router.delete("/:id", protect, deleteBooking);
 

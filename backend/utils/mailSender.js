@@ -96,7 +96,29 @@ const sendPasswordResetEmail = async (email, resetLink) => {
   }
 };
 
+const sendMessageNotification = async (to, senderName, propertyTitle, messageContent) => {
+  const mailOptions = {
+    from: process.env.MAIL_USER,
+    to,
+    subject: `New message regarding "${propertyTitle}"`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background-color: #f3f4f6; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <h2 style="font-size: 22px; color: #111827;">📨 New Message from ${senderName}</h2>
+          <p style="font-size: 16px; color: #374151;">You received a new message about <strong>${propertyTitle}</strong>:</p>
+          <blockquote style="background-color: #f9fafb; border-left: 4px solid #3b82f6; margin: 16px 0; padding: 12px; color: #1f2937;">
+            ${messageContent}
+          </blockquote>
+          <p style="font-size: 14px; color: #6b7280;">Please log in to your dashboard to reply or view more details.</p>
+        </div>
+      </div>
+    `
+  };
+
+  await transporter.sendMail(mailOptions);
+};
 module.exports = {
   sendConfirmationEmail,
   sendPasswordResetEmail,
+  sendMessageNotification
 };
