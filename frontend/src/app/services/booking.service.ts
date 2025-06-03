@@ -80,40 +80,39 @@ export class BookingService {
 
   // Calculate price for a booking - updated for monthly booking
   calculateBookingPrice(
-    propertyId: string,
-    bookingMonth: string,
-    guests: { adults: number; children: number }
-  ): Observable<{
+  propertyId: string,
+  bookingMonth: string,
+  bookingType: 'monthly' | 'nightly',
+  checkIn?: string,
+  checkOut?: string
+): Observable<{
+  success: boolean;
+  data: {
+    breakdown: {
+      basePrice: number;
+      totalPrice: number;
+      numberOfNights: number | null;
+      daysInSelectedMonth: number | null;
+      bookingType: string;
+    };
+  };
+  message?: string;
+}> {
+  return this.http.post<{
     success: boolean;
     data: {
       breakdown: {
         basePrice: number;
-        daysInMonth: number;
-        monthlyDiscount: string;
-        additionalGuestFee: number;
-        cleaningFee: number;
-        serviceFee: number;
         totalPrice: number;
+        numberOfNights: number | null;
+        daysInSelectedMonth: number | null;
+        bookingType: string;
       };
     };
     message?: string;
-  }> {
-    return this.http.post<{
-      success: boolean;
-      data: {
-        breakdown: {
-          basePrice: number;
-          daysInMonth: number;
-          monthlyDiscount: string;
-          additionalGuestFee: number;
-          cleaningFee: number;
-          serviceFee: number;
-          totalPrice: number;
-        };
-      };
-      message?: string;
-    }>(`${this.apiUrl}/calculate`, { propertyId, bookingMonth, guests });
-  }
+  }>(`${this.apiUrl}/calculate`, { propertyId, bookingMonth, bookingType, checkIn, checkOut });
+}
+
 
       //get messages between owner and client 
    getMessages(bookingId: string): Observable<any> {

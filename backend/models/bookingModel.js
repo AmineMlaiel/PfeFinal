@@ -36,7 +36,7 @@ const bookingSchema = new mongoose.Schema(
     guests: {
       adults: {
         type: Number,
-        required: [true, "Number of adults is required"],
+        required: [false, "Number of adults is required"],
         min: 1,
       },
       children: {
