@@ -61,7 +61,7 @@ export class BookingFormComponent implements OnInit{
   // Dates
   currentMonth = new Date().toISOString().slice(0, 7);
   selectedDate: string = '';
-  canSubmitBooking = false;
+  canSubmitBooking = true;
   currentUser: any = null;
 
 
@@ -81,6 +81,7 @@ export class BookingFormComponent implements OnInit{
   private subscribeToCurrentUser(): void {
     this.authService.getCurrentUser().subscribe({
       next: (user) => {
+        console.log("full user object recived", user);
         this.currentUser = user;
         if (user) {
           this.canSubmitBooking = !!user.isVerified;
@@ -89,14 +90,14 @@ export class BookingFormComponent implements OnInit{
             console.log("User is not verified. Verification status:", user.isVerified);
           }
         } else {
-          this.canSubmitBooking = false;
+          this.canSubmitBooking = true;
           this.prefillFormWithDefaults();
         }
       },
       error: (err) => {
         console.error("Error fetching current user:", err);
         this.currentUser = null;
-        this.canSubmitBooking = false;
+        this.canSubmitBooking = true;
         this.prefillFormWithDefaults();
       }
     });
@@ -108,7 +109,7 @@ export class BookingFormComponent implements OnInit{
         contactInfo: {
           name: user.name || '',
           email: user.email || '',
-          phone: user.phone || ''
+          phone: user.mobileNumber || ''
         }
       });
     }
@@ -126,36 +127,66 @@ export class BookingFormComponent implements OnInit{
     }
   }
 
-  handleBookingClick(): void {
-    if (this.bookingForm.invalid || this.isProcessing || !this.isAvailable) {
-      return;
-    }
+ handleBookingClick(): void {
+  if (this.bookingForm.invalid) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Invalid Booking Details',
+      text: 'Please fill in all required fields before submitting.',
+    });
+    return;
+  }
 
-    if (!this.authService.isAuthenticated()) {
+  if (this.isProcessing) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Processing',
+      text: 'Please wait while your booking is being processed.',
+    });
+    return;
+  }
+
+  if (!this.isAvailable) {
+    Swal.fire({
+      icon: 'warning',
+      title: 'Unavailable Date',
+      text: this.isMonthView
+        ? 'This month is not available for booking.'
+        : 'This date is not available for booking.',
+    });
+    return;
+  }
+
+  if (!this.authService.isAuthenticated()) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Login Required',
+      text: 'Please log in to complete your booking.',
+      confirmButtonText: 'Login Now'
+    }).then(() => {
       this.saveBookingIntent();
       this.router.navigate(['/login'], {
         queryParams: { returnUrl: this.router.url }
       });
-      return;
-    }
-
-    if (!this.canSubmitBooking) {
-      this.showVerificationWarning();
-      return;
-    }
-
-    this.onSubmit();
-  }
-
-  private showVerificationWarning(): void {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Account not validated',
-      text: 'Please verify your email address to continue booking.',
-      confirmButtonText: 'Got it',
-      footer: '<a href="/resend-verification">Resend verification email</a>'
     });
+    return;
   }
+
+  // if (!this.canSubmitBooking) {
+  //   Swal.fire({
+  //     icon: 'warning',
+  //     title: 'Account Not Verified',
+  //     text: 'Please verify your email to proceed with the booking.',
+  //     footer: '<a href="/resend-verification">Resend verification email</a>',
+  //     confirmButtonText: 'Got it'
+  //   });
+  //   return;
+  // }
+
+  // ✅ All good – proceed
+  this.onSubmit();
+}
+
 
 
 
@@ -216,28 +247,41 @@ export class BookingFormComponent implements OnInit{
   }
 
   calculatePrice(): void {
-    const bookingMonth = this.getBookingMonth();
-    if (!bookingMonth || !this.property?._id) return;
+  const bookingType = this.isMonthView ? 'monthly' : 'nightly';
+  const bookingMonth = this.getBookingMonth();  // e.g. "2025-06-01"
+  const checkIn = this.bookingForm.get('checkIn')?.value;
+  const checkOut = this.bookingForm.get('checkOut')?.value;
 
-    this.isCalculating = true;
-    const guests = this.bookingForm.get('guests')?.value;
+  if (!this.property?._id) return;
 
-    this.bookingService.calculateBookingPrice(this.property._id, bookingMonth, guests).subscribe({
-      next: (response) => {
-        if (response.success && response.data?.breakdown) {
-          this.totalPrice = response.data.breakdown.totalPrice;
-          this.basePrice = response.data.breakdown.basePrice;
-          this.serviceFee = response.data.breakdown.serviceFee;
-          this.daysInMonth = this.isMonthView ? response.data.breakdown.daysInMonth || 0 : 1;
-        }
-        this.isCalculating = false;
-      },
-      error: (err) => {
-        console.error('Error calculating price:', err);
-        this.isCalculating = false;
+  if (bookingType === 'monthly' && !bookingMonth) return;
+  if (bookingType === 'nightly' && (!checkIn || !checkOut)) return;
+
+  this.isCalculating = true;
+
+  this.bookingService.calculateBookingPrice(
+    this.property._id,
+    bookingMonth,
+    bookingType,
+    checkIn,
+    checkOut
+  ).subscribe({
+    next: (response) => {
+      if (response.success && response.data?.breakdown) {
+        const breakdown = response.data.breakdown;
+        this.totalPrice = breakdown.totalPrice;
+        this.basePrice = breakdown.basePrice;
+        this.daysInMonth = this.isMonthView ? (breakdown.daysInSelectedMonth || 0) : breakdown.numberOfNights || 1;
       }
-    });
-  }
+      this.isCalculating = false;
+    },
+    error: (err) => {
+      console.error('Error calculating price:', err);
+      this.isCalculating = false;
+    }
+  });
+}
+
 
   checkAvailability(): void {
     const bookingMonth = this.getBookingMonth();
@@ -272,10 +316,10 @@ export class BookingFormComponent implements OnInit{
       this.markFormGroupTouched(this.bookingForm);
       return;
     }
-    if (!this.canSubmitBooking) {
-      alert('Your account must be validated before making a booking.');
-      return;
-    }
+    // if (!this.canSubmitBooking) {
+    //   alert('Your account must be validated before making a booking.');
+    //   return;
+    // }
 
     if (!this.isAvailable) {
       this.errorMessage = this.isMonthView

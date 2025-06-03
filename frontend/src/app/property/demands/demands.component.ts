@@ -12,6 +12,8 @@ import { AuthService } from '../../auth/auth.service';
 import { DomSanitizer } from '@angular/platform-browser';
 import { finalize } from 'rxjs/operators';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Property } from '../../models/property.model';
+import jsPDF from 'jspdf';
 
 enum DemandStatus {
   PENDING = 'En attente',
@@ -19,12 +21,15 @@ enum DemandStatus {
   REJECTED = 'Refusée'
 }
 
+
 interface User {
   _id?: string;
   id?: string;
-  firstName?: string;
+  name?: string;
   lastName?: string;
   FirstName?: string;
+  email?: string;
+  mobileNumber?: string;
   LastName?: string;
   profileImage?: string;
 }
@@ -50,6 +55,9 @@ interface booking {
     createdAt: Date;
   }>;
   createdAt?: Date;
+  totalPrice?:string;
+  checkIn?: string | Date;
+  checkOut?: string | Date;
 }
 interface RawMessage {
   _id: string;
@@ -114,7 +122,7 @@ export class DemandsComponent implements OnInit {
     const user = this.getSafeUser();
     if (user) {
       this.ownerName = [
-        user.firstName || user.FirstName,
+        user.name || user.FirstName,
         user.lastName || user.LastName
       ].filter(Boolean).join(' ') || 'Propriétaire';
       this.currentUserId = user._id || user.id || '';
@@ -286,23 +294,179 @@ async sendMessage(demand: booking, index: number): Promise<void> {
   }, 500);
 }
 
-  generateContract(demand: booking): void {
-    const contractData = {
-      owner: this.ownerName,
-      renter: demand.contactInfo?.name || 'Locataire',
-      property: demand.property?.title || 'Propriété',
-      price: demand.property?.price || 0,
-      date: this.todayDate,
-      terms: [
-        'Le locataire s\'engage à payer le loyer à temps',
-        'Tous les dommages seront à la charge du locataire',
-        'Durée du contrat: 1 an'
-      ]
-    };
+   generateContract(demand: booking) {
+    // Use the passed 'demand' object directly as bookingData
+    const bookingData = demand;
     
-    console.log('Contract data:', contractData);
-    this.showSuccess('Contrat généré avec succès');
+    // Construct renterData from bookingData.contactInfo
+    // Provide default values if contactInfo is missing
+    const renterData: User = {
+        name: bookingData.contactInfo?.name || 'N/A',
+        email: bookingData.contactInfo?.email || 'N/A',
+        mobileNumber: bookingData.contactInfo?.phone || 'N/A',
+        // Add other User fields if they can be derived or are needed
+    };
+
+    // Use the simplified property data available in the booking object
+    const propertyData = bookingData.property || { title: 'N/A', price: 0 };
+
+    // --- PDF Generation Logic --- 
+    const pdf = new jsPDF('p', 'mm', 'a4');
+
+    // Header with Rentify branding (remains the same)
+    pdf.setFillColor(52, 152, 219);
+    pdf.rect(0, 0, 210, 35, 'F');
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(20, 8, 18, 18, 'F');
+    pdf.setTextColor(52, 152, 219);
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('R', 27, 20);
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(22);
+    pdf.text('RENTIFY', 45, 20);
+    pdf.setFontSize(8);
+    pdf.text('Professional Rental Platform', 45, 26);
+
+    // Contract title (remains the same)
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFontSize(18);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('RENTAL AGREEMENT CONTRACT', 105, 50, { align: 'center' });
+    
+    // Contract number and date (remains the same)
+    pdf.setFontSize(10);
+    pdf.text(`Contract Date: ${new Date().toLocaleDateString()}`, 20, 65);
+    pdf.text(`Contract ID: RENT-${Date.now().toString().slice(-6)}`, 150, 65);
+
+    let y = 80;
+
+    // Property Information - Simplified
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, y, 170, 7, 'F');
+    pdf.setTextColor(44, 62, 80);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('PROPERTY INFORMATION', 25, y + 5);
+    
+    y += 15;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    
+    pdf.text(`Property: ${propertyData.title || 'N/A'}`, 25, y);
+    // Removed fields not available in booking.property:
+    // pdf.text(`Type: ${propertyData.propertyType}`, 25, y + 5);
+    // pdf.text(`Address: ${propertyData.address?.street || propertyData.address}`, 25, y + 10);
+    // pdf.text(`City: ${propertyData.address?.city || ''}, ${propertyData.address?.country || ''}`, 25, y + 15);
+    // pdf.text(`Bedrooms: ${propertyData.bedrooms}`, 25, y + 20);
+    // pdf.text(`Bathrooms: ${propertyData.bathrooms}`, 100, y + 20);
+    // pdf.text(`Area: ${propertyData.area} sqm`, 25, y + 25);
+    y += 10; // Adjust spacing after removing lines
+
+    y += 20; // Adjust spacing
+
+    // Renter Information (using derived renterData)
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, y, 170, 7, 'F');
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('RENTER INFORMATION', 25, y + 5);
+    
+    y += 15;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    
+    // Use derived renterData fields
+    pdf.text(`Name: ${renterData.name || 'N/A'}`, 25, y);
+    pdf.text(`Email: ${renterData.email || 'N/A'}`, 25, y + 5);
+    pdf.text(`Phone: ${renterData.mobileNumber || 'N/A'}`, 25, y + 10);
+    
+    y += 25;
+
+    // Contact Person section removed as renter info is derived from contactInfo
+    // If contactInfo is different from the actual renter, this logic needs adjustment
+
+    // Rental Terms (using bookingData)
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, y, 170, 7, 'F');
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('RENTAL TERMS', 25, y + 5);
+    
+    y += 15;
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    
+    const checkIn = bookingData.checkIn ? new Date(bookingData.checkIn) : null;
+    const checkOut = bookingData.checkOut ? new Date(bookingData.checkOut) : null;
+  
+    pdf.text(`Check-in: ${checkIn ? checkIn.toLocaleDateString() : 'N/A'}`, 25, y);
+    pdf.text(`Check-out: ${checkOut ? checkOut.toLocaleDateString() : 'N/A'}`, 100, y);
+    pdf.text(`Total Price: DT${bookingData.totalPrice || 'N/A'}`, 25, y + 10);
+    // Removed cleaning fee as it's part of full Property data
+    // if (propertyData.cleaningFee) { ... }
+    pdf.text(`Status: ${bookingData.statut || bookingData.status?.toUpperCase() || 'PENDING'}`, 25, y + 15);
+
+    y += 30;
+
+    // Property Features section removed as it requires full Property data
+    // if (propertyData.features && propertyData.features.length > 0) { ... }
+
+    // Terms and Conditions (remains the same)
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(20, y, 170, 7, 'F');
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('TERMS & CONDITIONS', 25, y + 5);
+    
+    y += 15;
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    
+    const terms = [
+      '1. The renter agrees to pay the total amount as specified above.',
+      '2. Check-in and check-out times must be respected.',
+      '3. Property must be left in the same condition as found.',
+      '4. Any damages will be charged separately.',
+      '5. Cancellation policy applies as per Rentify terms.'
+    ];
+    
+    terms.forEach((term, index) => {
+      pdf.text(term, 25, y + (index * 5));
+    });
+
+    y += 35;
+
+    // Signatures (remains the same, uses ownerName from component)
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Owner Signature:', 25, y); // Owner is the logged-in user (this.ownerName)
+    pdf.text('Renter Signature:', 120, y); // Renter is from contactInfo
+    
+    pdf.line(25, y + 10, 80, y + 10);
+    pdf.line(120, y + 10, 175, y + 10);
+    
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(this.ownerName, 25, y + 15); // Add owner name below line
+    pdf.text(renterData.name || 'N/A', 120, y + 15); // Add renter name below line
+    pdf.text('Date: __________', 25, y + 20);
+    pdf.text('Date: __________', 120, y + 20);
+
+    // Footer (remains the same)
+    pdf.setFontSize(8);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text('Generated by Rentify Platform - Professional Rental Management', 105, 285, { align: 'center' });
+
+    // Save the PDF (using renter name from derived data)
+    const safeRenterName = (renterData.name || 'UnknownRenter').replace(/[^a-zA-Z0-9]/g, '_');
+    const fileName = `rental-contract-${safeRenterName}-${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+    
+    this.showSuccess(`Contract ${fileName} generated successfully.`);
   }
+
+
 
   // transformImgUrl(url: string): any {
   //   return this.sanitizer.bypassSecurityTrustResourceUrl(url || 'public/favicon-96x96.png');

@@ -726,30 +726,20 @@ exports.checkAvailability = async (req, res) => {
 // @access  Public
 exports.calculateBookingPrice = async (req, res) => {
   try {
-    const { propertyId, bookingMonth, guests, bookingType, checkIn, checkOut } = req.body;
+    const { propertyId, bookingMonth, bookingType, checkIn, checkOut } = req.body;
 
-    // Validate required fields
-    if (!propertyId || !guests || !bookingType) {
+    if (!propertyId || !bookingType) {
       return res.status(400).json({
         success: false,
-        message: "Property ID, guests information, and booking type are required",
+        message: "Property ID and booking type are required",
       });
     }
 
-    // Validate guests structure
-    if (!guests.adults || guests.adults < 1) {
-      return res.status(400).json({
-        success: false,
-        message: "At least one adult is required",
-      });
-    }
-
-    // Fetch the property
     const property = await Property.findById(propertyId);
     if (!property) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Property not found" 
+      return res.status(404).json({
+        success: false,
+        message: "Property not found",
       });
     }
 
@@ -758,26 +748,25 @@ exports.calculateBookingPrice = async (req, res) => {
     let daysInSelectedMonth = 0;
 
     if (bookingType === 'monthly') {
-      // Monthly booking validation
       if (!bookingMonth) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Booking month is required for monthly bookings" 
+        return res.status(400).json({
+          success: false,
+          message: "Booking month is required for monthly bookings",
         });
       }
-      
+
       if (!property.pricePerMonth) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Monthly pricing is not available for this property" 
+        return res.status(400).json({
+          success: false,
+          message: "Monthly pricing is not available for this property",
         });
       }
 
       const monthDate = new Date(bookingMonth);
       if (isNaN(monthDate.getTime())) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid booking month format" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid booking month format",
         });
       }
 
@@ -786,42 +775,41 @@ exports.calculateBookingPrice = async (req, res) => {
       basePrice = property.pricePerMonth;
 
     } else if (bookingType === 'nightly') {
-      // Nightly booking validation
       if (!checkIn || !checkOut) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Check-in and check-out dates are required for nightly bookings" 
+        return res.status(400).json({
+          success: false,
+          message: "Check-in and check-out dates are required for nightly bookings",
         });
       }
 
       if (!property.pricePerNight) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Nightly pricing is not available for this property" 
+        return res.status(400).json({
+          success: false,
+          message: "Nightly pricing is not available for this property",
         });
       }
 
       const startDate = new Date(checkIn);
       const endDate = new Date(checkOut);
-      
+
       if (isNaN(startDate.getTime())) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid check-in date format" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid check-in date format",
         });
       }
 
       if (isNaN(endDate.getTime())) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Invalid check-out date format" 
+        return res.status(400).json({
+          success: false,
+          message: "Invalid check-out date format",
         });
       }
 
       if (endDate <= startDate) {
-        return res.status(400).json({ 
-          success: false, 
-          message: "Check-out date must be after check-in date" 
+        return res.status(400).json({
+          success: false,
+          message: "Check-out date must be after check-in date",
         });
       }
 
@@ -829,37 +817,20 @@ exports.calculateBookingPrice = async (req, res) => {
       basePrice = property.pricePerNight * numberOfNights;
 
     } else {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid booking type specified. Choose 'nightly' or 'monthly'" 
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking type specified. Choose 'nightly' or 'monthly'",
       });
     }
 
-    // Calculate additional guest fee
-    let additionalGuestFee = 0;
-    const totalGuests = guests.adults + (guests.children || 0);
-    
-    if (property.additionalGuestFee && property.baseGuests && totalGuests > property.baseGuests) {
-      const additionalGuests = totalGuests - property.baseGuests;
-      additionalGuestFee = additionalGuests * property.additionalGuestFee * numberOfNights;
-    }
-
-    // Calculate other fees
-    const cleaningFee = property.cleaningFee || 0;
-    const serviceFeePercentage = property.serviceFeePercentage || 0.1; // Default to 10%
-    const serviceFee = basePrice * serviceFeePercentage;
-
-    // Calculate total price
-    const totalPrice = basePrice + additionalGuestFee + cleaningFee + serviceFee;
+    // Calculate total price (just the base price, no fees or guests)
+    const totalPrice = basePrice;
 
     res.status(200).json({
       success: true,
       data: {
         breakdown: {
           basePrice,
-          additionalGuestFee,
-          cleaningFee,
-          serviceFee,
           totalPrice,
           numberOfNights,
           daysInSelectedMonth: bookingType === 'monthly' ? daysInSelectedMonth : null,
@@ -876,6 +847,7 @@ exports.calculateBookingPrice = async (req, res) => {
     });
   }
 };
+
 
 // @desc    Delete a booking
 // @route   DELETE /api/bookings/:id

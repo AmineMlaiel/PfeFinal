@@ -2,9 +2,8 @@
   <div class="booking-form-header">
     <h3>Book This Property</h3>
     <div class="price-info">
-      <span class="price">{{ property.pricePerNight | currency }} </span>
-      <span class="per-night">/ night</span>
-      <span class="monthly-discount" *ngIf="isMonthView">(15% monthly discount applied)</span>
+      <span class="price">{{ property.pricePerNight | currency }} /night </span>
+      <span class="monthly-discount" *ngIf="isMonthView"> {{ property.pricePerMonth | currency }} /Month</span>
     </div>
   </div>
 
@@ -49,86 +48,43 @@
     </div>
 
     <!-- Date Selection -->
-    <div class="date-selection" *ngIf="!isMonthView">
-      <div class="form-group">
-        <label for="bookingDate">
-          <fa-icon [icon]="icons.calendar"></fa-icon> Select Date
-        </label>
-        <input
-          type="date"
-          id="bookingDate"
-          formControlName="bookingDate"
-          [min]="currentMonth + '-01'"
-          [class.is-invalid]="bookingForm.get('bookingDate')?.invalid && bookingForm.get('bookingDate')?.touched"
-        />
-        <div class="validation-error" *ngIf="bookingForm.get('bookingDate')?.invalid && bookingForm.get('bookingDate')?.touched">
-          Please select a booking date
-        </div>
-      </div>
+    <!-- Date Selection for Daily Booking -->
+<div class="date-selection" *ngIf="!isMonthView">
+  <div class="form-group">
+    <label for="checkIn">
+      <fa-icon [icon]="icons.calendar"></fa-icon> Check-In
+    </label>
+    <input
+      type="date"
+      id="checkIn"
+      formControlName="checkIn"
+      [min]="currentMonth + '-01'"
+      [class.is-invalid]="bookingForm.get('checkIn')?.invalid && bookingForm.get('checkIn')?.touched"
+    />
+    <div class="validation-error" *ngIf="bookingForm.get('checkIn')?.invalid && bookingForm.get('checkIn')?.touched">
+      Please select a check-in date
     </div>
+  </div>
 
-    <!-- Guest Selection -->
-    <div formGroupName="guests" class="guest-selection">
-      <div class="form-group">
-        <label for="adults">
-          <fa-icon [icon]="icons.user"></fa-icon> Adults
-        </label>
-        <div class="number-input">
-          <button
-            type="button"
-            (click)="adjustGuests('adults', -1)"
-            [disabled]="bookingForm.get('guests.adults')?.value <= 1"
-          >
-            <fa-icon [icon]="icons.minus"></fa-icon>
-          </button>
-          <input
-            type="number"
-            id="adults"
-            formControlName="adults"
-            min="1"
-            max="10"
-            readonly
-          />
-          <button
-            type="button"
-            (click)="adjustGuests('adults', 1)"
-            [disabled]="bookingForm.get('guests.adults')?.value >= 10"
-          >
-            <fa-icon [icon]="icons.plus"></fa-icon>
-          </button>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="children">
-          <fa-icon [icon]="icons.user"></fa-icon> Children
-        </label>
-        <div class="number-input">
-          <button
-            type="button"
-            (click)="adjustGuests('children', -1)"
-            [disabled]="bookingForm.get('guests.children')?.value <= 0"
-          >
-            <fa-icon [icon]="icons.minus"></fa-icon>
-          </button>
-          <input
-            type="number"
-            id="children"
-            formControlName="children"
-            min="0"
-            max="6"
-            readonly
-          />
-          <button
-            type="button"
-            (click)="adjustGuests('children', 1)"
-            [disabled]="bookingForm.get('guests.children')?.value >= 6"
-          >
-            <fa-icon [icon]="icons.plus"></fa-icon>
-          </button>
-        </div>
-      </div>
+  <div class="form-group">
+    <label for="checkOut">
+      <fa-icon [icon]="icons.calendar"></fa-icon> Check-Out
+    </label>
+    <input
+      type="date"
+      id="checkOut"
+      formControlName="checkOut"
+      [min]="bookingForm.get('checkIn')?.value"
+      [class.is-invalid]="bookingForm.get('checkOut')?.invalid && bookingForm.get('checkOut')?.touched"
+    />
+    <div class="validation-error" *ngIf="bookingForm.get('checkOut')?.invalid && bookingForm.get('checkOut')?.touched">
+      Please select a check-out date
     </div>
+  </div>
+</div>
+
+
+    
 
     <!-- Contact Information -->
     <div formGroupName="contactInfo" class="contact-info">
@@ -203,10 +159,14 @@
 
       <div *ngIf="!isCalculating && totalPrice > 0" class="price-breakdown">
         <div class="price-item">
-          <span *ngIf="isMonthView">{{ property.pricePerNight | currency }} x {{ daysInMonth }} days (15% monthly discount)</span>
-          <span *ngIf="!isMonthView">{{ property.pricePerNight | currency }} x 1 day</span>
-          <span>{{ basePrice | currency }}</span>
-        </div>
+  <span *ngIf="isMonthView">
+    {{ property.pricePerNight | currency }} x {{ daysInMonth }} days (15% monthly discount)
+  </span>
+  <span *ngIf="!isMonthView">
+    {{ property.pricePerNight | currency }} x {{ daysInMonth }} night<span *ngIf="daysInMonth > 1">s</span>
+  </span>
+  <span>{{ basePrice | currency }}</span>
+</div>
 
         <div class="price-item">
           <span>Service fee</span>
