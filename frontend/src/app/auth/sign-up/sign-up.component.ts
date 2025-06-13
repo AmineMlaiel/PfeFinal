@@ -109,7 +109,7 @@ export class SignUpComponent implements OnInit {
               confirmButtonText: 'Go to Login',
             }).then(() => {
               // Redirect to the login page after successful registration
-              this.router.navigate(['/login']);
+              this.router.navigate(['/profile']);
             });
           } else {
             Swal.fire({
